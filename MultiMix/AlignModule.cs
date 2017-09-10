@@ -150,7 +150,7 @@ namespace IngameScript {
 					alignVec = sc.GetShipVelocities().LinearVelocity;
 					if (Vector3D.IsZero(alignVec)) {
 						// No usable velocity, reset all gyros
-						gyros.ForEach(g => SetGyro(g));
+						foreach(var g in gyros) { SetGyro(g); }
 						return false;
 					}
 				}
@@ -167,7 +167,7 @@ namespace IngameScript {
 
 				needFastTrigger = false;
 				alignDifference = 0;
-				gyros.ForEach(g => {
+				foreach(var g in gyros) {
 					g.Orientation.GetMatrix(out or);
 					localDown = Vector3D.Transform(down, MatrixD.Transpose(or));
 					localGrav = Vector3D.Transform(alignVec, MatrixD.Transpose(g.WorldMatrix.GetOrientation()));
@@ -192,7 +192,7 @@ namespace IngameScript {
 					} else {
 						SetGyro(g);
 					}
-				});
+				}
 				return needFastTrigger;
 			}
 		}

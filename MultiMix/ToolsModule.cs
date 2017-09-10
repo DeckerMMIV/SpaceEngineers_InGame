@@ -167,8 +167,8 @@ namespace IngameScript {
 					blks[0].GetProperty("BeamLength");
 					var blk = blks[0];
 					float beamLength = blk.GetValueFloat("BeamLength");
-					beamLength=MathHelper.Clamp(beamLength+dir, 1, 20);
-					blks.ForEach(b=>b.SetValueFloat("BeamLength",beamLength));
+					beamLength = MathHelper.Clamp(beamLength+dir, 1, 20);
+					foreach(var b in blks) { b.SetValueFloat("BeamLength",beamLength); }
 				} catch(Exception) {
 					// Ignored
 				}

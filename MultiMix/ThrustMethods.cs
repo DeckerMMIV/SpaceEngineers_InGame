@@ -27,24 +27,24 @@ namespace IngameScript {
 
 		private static int ApplyThrustPct(List<IMyTerminalBlock> blocks, int absPct, int diffPct) {
 			float sumMaxOverride = 0, sumNewOverride = 0, maxOverride, newOverride, pct;
-			Func<IMyThrust, float, float> calcThrust;
+			Func<float, IMyThrust, float, float> calcThrust;
 			if (diffPct != 0) {
 				pct = diffPct / 100f;
-				calcThrust = (IMyThrust t, float maxT) => { return Math.Max(0, Math.Min(t.GetValueFloat("Override") + (maxT * pct), maxT)); };
+				calcThrust = (float pct2, IMyThrust t, float maxT) => { return Math.Max(0, Math.Min(t.GetValueFloat("Override") + (maxT * pct2), maxT)); };
 			} else if (absPct >= 0) {
 				pct = Math.Min(absPct / 100f, 1f);
-				calcThrust = (IMyThrust t, float maxT) => { return maxT * pct; };
+				calcThrust = (float pct2, IMyThrust t, float maxT) => { return maxT * pct2; };
 			} else {
 				return 0;
 			}
-			blocks.ForEach(b => {
+			foreach(var b in blocks) {
 				var t = b as IMyThrust;
 				if (null != t) {
-					t.SetValueFloat("Override", newOverride = calcThrust(t, maxOverride = t.GetMaximum<float>("Override")));
+					t.SetValueFloat("Override", newOverride = calcThrust(pct, t, maxOverride = t.GetMaximum<float>("Override")));
 					sumMaxOverride += maxOverride;
 					sumNewOverride += newOverride;
 				}
-			});
+			}
 			return (int)((sumNewOverride * 100f) / Math.Max(1f, sumMaxOverride));
 		}
 

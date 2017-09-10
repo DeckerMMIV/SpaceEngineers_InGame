@@ -78,7 +78,9 @@ namespace IngameScript {
 						var lst = GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController());
 						if (0 != m) {
 							int o=0;
-							lst.ForEach(b => { o += (int)((b as IMyThrust).GetValueFloat("Override")); });
+							foreach(var b in lst) {
+								o += (int)((b as IMyThrust).GetValueFloat("Override"));
+							}
 							if (100==m) {
 								m = o>0 ? 0 : m;
 							} else {
@@ -96,8 +98,21 @@ namespace IngameScript {
 					foreach(string txt in Pgm.DIRECTIONS) {
 						ThrustFlags tf = (ThrustFlags)(1<<i);
 						int j=i++;
-						md.Add(Menu(()=>GetText(1,txt,pad[j])).Collect(this).Enter($"toggle{txt}",()=>tsToggle(tf)).Left(()=>tsOn(tf)).Right(()=>tsOff(tf)));
-						mo.Add(Menu(()=>GetText(2,txt,pad[j])).Collect(this).Enter($"thrust{txt}",()=>tsPower(tf,100)).Left(()=>tsPower(tf,-1)).Right(()=>tsPower(tf,1)).Back(()=>tsPower(tf,0)));
+						md.Add(
+							Menu(()=>GetText(1,txt,pad[j]))
+								.Collect(this)
+								.Enter($"toggle{txt}",()=>tsToggle(tf))
+								.Left(()=>tsOn(tf))
+								.Right(()=>tsOff(tf))
+						);
+						mo.Add(
+							Menu(()=>GetText(2,txt,pad[j]))
+								.Collect(this)
+								.Enter($"thrust{txt}",()=>tsPower(tf,100))
+								.Left(()=>tsPower(tf,-1))
+								.Right(()=>tsPower(tf,1))
+								.Back(()=>tsPower(tf,0))
+						);
 					}
 					tt.Add(md, mo);
 				}

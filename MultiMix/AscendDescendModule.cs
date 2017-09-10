@@ -122,7 +122,8 @@ namespace IngameScript {
 				int prio;
 				Dictionary<string, List<IMyThrust>> thrType;
 				List<IMyThrust> thrList;
-				GetThrustBlocks(ThrustFlags.AllEngines | (likeRocket ? ThrustFlags.PushForward : ThrustFlags.PushUpward), Pgm, Me, sc).ForEach(b => {
+				var tmpLst = GetThrustBlocks(ThrustFlags.AllEngines | (likeRocket ? ThrustFlags.PushForward : ThrustFlags.PushUpward), Pgm, Me, sc);
+				foreach(var b in tmpLst) {
 					if (!b.IsFunctional || NameContains(b, MultiMix_IgnoreBlocks)) return;
 
 					if (SubtypeContains(b, "Atmos")) { prio = PRIO_ATMOS; }
@@ -136,7 +137,7 @@ namespace IngameScript {
 						thrType.Add(b.BlockDefinition.SubtypeId, thrList = new List<IMyThrust>());
 					}
 					thrList.Add(b as IMyThrust);
-				});
+				}
 			}
 
 			public int MaxSpeed {
@@ -236,8 +237,14 @@ namespace IngameScript {
 				if (hydrogenTanks.Count > 0) {
 					if (hydroTanksUpdateTick < Pgm.totalTicks) {
 						hydroTanksUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/3;
-						hydroTanksPctFilled = 0; hydroTanksGiving = 0;
-						hydrogenTanks.ForEach(x => { if (x.IsWorking && !x.Stockpile) { hydroTanksPctFilled += x.FilledRatio; hydroTanksGiving++; } });
+						hydroTanksPctFilled = 0;
+						hydroTanksGiving = 0;
+						foreach(var h in hydrogenTanks) {
+							if (h.IsWorking && !h.Stockpile) {
+								hydroTanksPctFilled += h.FilledRatio;
+								hydroTanksGiving++;
+							} 
+						}
 						hydroTanksPctFilled /= hydrogenTanks.Count;
 					}
 					AppendPctBar(sb1, $"\n Hydr:", -hydroTanksPctFilled, 30, false).Append($" {hydroTanksPctFilled * 100:F1}% in {hydroTanksGiving} tanks");
@@ -246,8 +253,16 @@ namespace IngameScript {
 				if (batteries.Count > 0) {
 					if (batteriesUpdateTick < Pgm.totalTicks) {
 						batteriesUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond;
-						battStoredPower = 0; battMaxPower = 0; battNumCharging = 0;
-						batteries.ForEach(b => { if (b.IsWorking) { battStoredPower += b.CurrentStoredPower; battMaxPower += b.MaxStoredPower; battNumCharging += b.IsCharging ? 1 : 0; } });
+						battStoredPower = 0;
+						battMaxPower = 0;
+						battNumCharging = 0;
+						foreach(var b in batteries) {
+							if (b.IsWorking) {
+								battStoredPower += b.CurrentStoredPower;
+								battMaxPower += b.MaxStoredPower;
+								battNumCharging += b.IsCharging ? 1 : 0;
+							} 
+						}
 						battAllCharging = battNumCharging == batteries.Count;
 					}
 					AppendPctBar(sb1, "\n Batt:", (battStoredPower / battMaxPower) * (battAllCharging ? 1 : -1), 30, false); if (battAllCharging) { sb1.Append($" {chargeAnim[execCount & 3]} Recharging"); }
@@ -487,7 +502,9 @@ namespace IngameScript {
 							float eff = thrst.MaxEffectiveThrust / thrst.MaxThrust;
 							if (eff >= minEff) {
 								int cnt = 0;
-								thrsts.ForEach(t => cnt += t.IsWorking ? 1 : 0);
+								foreach(var t in thrsts) {
+									cnt += t.IsWorking ? 1 : 0;
+								}
 								totalEffThrust += thrst.MaxEffectiveThrust * cnt;
 							}
 						}
@@ -552,7 +569,10 @@ namespace IngameScript {
 						}
 
 						float ovr = thrst.GetMaximum<float>("Override") * pct;
-						thrsts.ForEach(t => { sumThrustCurEff += t.CurrentThrust; t.SetValueFloat("Override", ovr); });
+						foreach(var t in thrsts) {
+							sumThrustCurEff += t.CurrentThrust;
+							t.SetValueFloat("Override", ovr);
+						}
 
 						AppendPctBar(sb2, "\n Thr:", pct, barLen, false);
 						AppendPctBar(sb2, " Eff:", eff, barLen, false, true);
@@ -565,8 +585,9 @@ namespace IngameScript {
 				thrustPct = remainThrustNeeded = totalThrustWanted = 0;
 				for (var thrPrio = thrusts.GetEnumerator(); thrPrio.MoveNext();) {
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();) {
-						var thrsts = thrType.Current.Value;
-						thrsts.ForEach(t => { if (t.ThrustOverride > 0) { t.SetValueFloat("Override", 0); } });
+						foreach(var t in thrType.Current.Value) {
+							if (t.ThrustOverride > 0) { t.SetValueFloat("Override", 0); }
+						}
 					}
 				}
 			}
@@ -588,7 +609,7 @@ namespace IngameScript {
 						var thrst = thrsts[0];
 
 						localThrustCur = 0;
-						thrsts.ForEach(t => { localThrustCur += t.CurrentThrust; });
+						foreach(var t in thrsts) { localThrustCur += t.CurrentThrust; }
 						sumThrustCurEff += localThrustCur;
 
 						localThrustMax = thrst.MaxThrust * thrsts.Count;

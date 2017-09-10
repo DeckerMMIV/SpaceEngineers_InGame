@@ -64,7 +64,7 @@ namespace IngameScript {
 						sb.Append("\n Connector: ").Append(hasLock ? "Locked" : "Released");
 						if (hasLock != wasLocked) {
 							wasLocked = hasLock;
-							EjectorsEnabled=EjectorsEnabled;
+							EjectorsEnabled = EjectorsEnabled; // Forced update
 						}
 					} else {
 						if (hasMagnet) {
@@ -96,10 +96,10 @@ namespace IngameScript {
 
 			void CheckConnectors(out bool hasLocked, out bool hasMagnet) {
 				bool anyLocked = false, anyMagnet = false;
-				connectors.ForEach(c => {
+				foreach (var c in connectors) {
 					anyLocked |= c.Status == MyShipConnectorStatus.Connected;
 					anyMagnet |= c.Status == MyShipConnectorStatus.Connectable;
-				});
+				}
 				hasLocked = anyLocked;
 				hasMagnet = anyMagnet;
 			}
@@ -175,14 +175,14 @@ namespace IngameScript {
 			private void DoAutoDecend() {
 				if (AutoDecend && autoDecendNextTick < Pgm.totalTicks) {
 					autoDecendNextTick = Pgm.totalTicks + TimeSpan.TicksPerSecond;
-					Pgm.yieldMgr.Add(DoDescend());
+					Pgm.yieldMgr?.Add(DoDescend());
 				}
 			}
 			IEnumerable<int> DoDescend() {
 				var rc = Pgm.GetShipController();
 				if (null==rc) { yield break; }
 				rc.DampenersOverride = false;
-				yield return 10;
+				yield return 100;
 
 				rc = Pgm.GetShipController();
 				if (null!=rc) { rc.DampenersOverride = true; }
@@ -267,7 +267,12 @@ namespace IngameScript {
 
 			public bool EjectorsEnabled {
 				get { return ejectorsEnabled; }
-				set { ejectorsEnabled = value; ejectors.ForEach(e => e.Enabled = (!wasLocked && value)); }
+				set {
+					ejectorsEnabled = value;
+					foreach(var e in ejectors) {
+						e.Enabled = (!wasLocked && value);
+					}
+				}
 			}
 			bool ejectorsEnabled = true;
 		}

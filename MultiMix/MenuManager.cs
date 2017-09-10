@@ -64,11 +64,13 @@ namespace IngameScript {
 			private void BuildLinearMenu() {
 				Action<int, List<MenuItem>> recurse = null;
 				recurse = (i, e) => {
-					e?.ForEach(c => {
-						c.Indent = i;
-						linearMenu.Add(c);
-						recurse(i + 1, c.GetSubMenu());
-					});
+					if (null != e) {
+						foreach(var c in e) {
+							c.Indent = i;
+							linearMenu.Add(c);
+							recurse(i + 1, c.GetSubMenu());
+						}
+					}
 				};
 
 				linearMenu.Clear();
@@ -107,12 +109,12 @@ namespace IngameScript {
 					if (null != collector && !collectors.Contains(collector)) { collectors.Add(collector); }
 				}
 				if (collectors.Count > 0) {
-					collectors.ForEach(c => c.CollectSetup());
+					foreach(var c in collectors) { c.CollectSetup(); }
 					pgm.GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(null, b => {
-						collectors.ForEach(c => c.CollectBlock(b));
+						foreach(var c in collectors) { c.CollectBlock(b); }
 						return false;
 					});
-					collectors.ForEach(c => c.CollectTeardown());
+					foreach(var c in collectors) { c.CollectTeardown(); }
 					collectors.Clear();
 				}
 

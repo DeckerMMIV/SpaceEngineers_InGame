@@ -25,14 +25,14 @@ namespace IngameScript {
 			public void WritePublicText(StringBuilder sb) {
 				var txt = sb.ToString();
 				sb.Clear();
-				lcds.ForEach(p => p.WritePublicText(txt));
+				foreach(var p in lcds) { p.WritePublicText(txt); }
 			}
 
 			public void ShowPublicText(string txt=null) {
-				lcds.ForEach(p => {
+				foreach(var p in lcds) {
 					if (null != txt) { p.WritePublicText(txt); }
 					if (!p.ShowText) { p.ShowPublicTextOnScreen(); }
-				});
+				}
 			}
 
 			List<IMyTextPanel> lcds = new List<IMyTextPanel>();
