@@ -17,47 +17,47 @@ using VRageMath;
 namespace IngameScript {
 	partial class Program {
 		//-------------
-		public static void ApplyAction(List<IMyTerminalBlock> blocks, string actName) {
-			foreach(var b in blocks) {
+		public static void ApplyAction(List<IMyTerminalBlock> blks, string actName) {
+			foreach(var b in blks)
 				b.ApplyAction(actName);
-			}
 		}
 
-		public static bool SetPropertyAbsToggle(List<IMyTerminalBlock> blocks, string propName) {
-			int[] cntOffOn = { 0, 0 };
-			foreach(var b in blocks) {
-				var blk = b as IMyFunctionalBlock;
-				if (null != blk) cntOffOn[blk.GetValueBool(propName) ? 1 : 0]++;
+		public static bool SetPropertyAbsToggle(List<IMyTerminalBlock> blks, string propName) {
+			int[] cntOffOn = {0,0};
+			foreach(var b in blks) {
+				var f = b as IMyFunctionalBlock;
+				if (null != f)
+					cntOffOn[f.GetValueBool(propName) ? 1 : 0]++;
 			}
-			return SetProperty(blocks, propName, cntOffOn[0] >= cntOffOn[1]);
+			return SetProperty(blks, propName, cntOffOn[0] >= cntOffOn[1]);
 		}
 
-		public static bool SetProperty(List<IMyTerminalBlock> blocks, string propName, bool propVal) {
-			foreach(var b in blocks) {
+		public static bool SetProperty(List<IMyTerminalBlock> blks, string propName, bool propVal) {
+			foreach(var b in blks)
 				b.SetValueBool(propName, propVal);
-			}
 			return propVal;
 		}
-		public static float SetProperty(List<IMyTerminalBlock> blocks, string propName, float propVal) {
-			foreach(var b in blocks) {
+		public static float SetProperty(List<IMyTerminalBlock> blks, string propName, float propVal) {
+			foreach(var b in blks)
 				b.SetValueFloat(propName, propVal);
-			}
 			return propVal;
 		}
 
-		public static bool SetEnabledAbsToggle(List<IMyTerminalBlock> blocks) {
-			int[] numOffOn = { 0, 0 };
-			foreach(var b in blocks) {
-				var blk = b as IMyFunctionalBlock;
-				if (null != blk) numOffOn[blk.Enabled ? 1 : 0]++;
+		public static bool SetEnabledAbsToggle(List<IMyTerminalBlock> blks) {
+			int[] cntOffOn = {0,0};
+			foreach(var b in blks) {
+				var f = b as IMyFunctionalBlock;
+				if (null != f)
+					cntOffOn[f.Enabled ? 1 : 0]++;
 			}
-			return SetEnabled(blocks, numOffOn[0] >= numOffOn[1]);
+			return SetEnabled(blks, cntOffOn[0] >= cntOffOn[1]);
 		}
 
-		public static bool SetEnabled(List<IMyTerminalBlock> blocks, bool enable) {
-			foreach(var b in blocks) {
-				var blk = b as IMyFunctionalBlock;
-				if (null != blk) blk.Enabled = enable;
+		public static bool SetEnabled(List<IMyTerminalBlock> blks, bool enable) {
+			foreach(var b in blks) {
+				var f = b as IMyFunctionalBlock;
+				if (null != f)
+					f.Enabled = enable;
 			}
 			return enable;
 		}

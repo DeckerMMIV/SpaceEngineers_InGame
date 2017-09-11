@@ -34,9 +34,9 @@ namespace IngameScript {
 			} else if (absPct >= 0) {
 				pct = Math.Min(absPct / 100f, 1f);
 				calcThrust = (float pct2, IMyThrust t, float maxT) => { return maxT * pct2; };
-			} else {
+			} else
 				return 0;
-			}
+
 			foreach(var b in blocks) {
 				var t = b as IMyThrust;
 				if (null != t) {
@@ -84,43 +84,37 @@ namespace IngameScript {
 			var res = new List<IMyTerminalBlock>();
 
 			ThrustFlags engineTypes = flags & ThrustFlags.AllEngines;
-			if (ThrustFlags.AllEngines == engineTypes) {
+			if (ThrustFlags.AllEngines == engineTypes)
 				// When 'all engine types', then use value zero
 				engineTypes = 0;
-			}
 
 			ThrustFlags engineSizes = flags & ThrustFlags.AllSizes;
-			if (ThrustFlags.AllSizes == engineSizes) {
+			if (ThrustFlags.AllSizes == engineSizes)
 				// When 'all engine sizes', then use value zero
 				engineSizes = 0;
-			}
 
 			ThrustFlags thrustDirections = flags & ThrustFlags.AllDirections;
-			if (ThrustFlags.AllDirections == thrustDirections) {
+			if (ThrustFlags.AllDirections == thrustDirections)
 				// When 'all thrust directions', then use value zero
 				thrustDirections = 0;
-			}
 
-			if (0 < thrustDirections && null == dirRefBlk) {
+			if (0 < thrustDirections && null == dirRefBlk)
 				// Requested specific thrust-direction(s), but missing a 'directionReferenceBlock' for orientation
 				return res;
-			}
 
 			// Collect the thrust-blocks which matches criteria of the thrust-flags requested
 			pgm.GridTerminalSystem.GetBlocksOfType<IMyThrust>(res, thr => {
-				if (null != myGrid && !SameGrid(thr, myGrid)) {
+				if (null != myGrid && !SameGrid(thr, myGrid))
 					// Requested that thruster should be on same grid as the ´myGrid´ block, but it was not
 					return false;
-				}
 
 				if (0 < engineSizes) {
 					// If thruster-block has more than 4 cubes, then it is (probably) a large thruster
 					bool isLarge = (thr.Max - thr.Min).Size > 4;
 					if (isLarge) {
-						if (0 == (engineSizes & ThrustFlags.Large)) {
+						if (0 == (engineSizes & ThrustFlags.Large))
 							// Thruster is (probably) 'large', but it was not requested
 							return false;
-						}
 					} else if (0 == (engineSizes & ThrustFlags.Small)) {
 						// Thruster is (probably) 'small', but it was not requested
 						return false;
@@ -129,25 +123,23 @@ namespace IngameScript {
 
 				if (0 < engineTypes) {
 					if (SubtypeContains(thr, "Atmo")) {
-						if (0 == (engineTypes & ThrustFlags.Atmospheric)) {
+						if (0 == (engineTypes & ThrustFlags.Atmospheric))
 							// Thruster is (probably) 'atmospheric', but it was not requested
 							return false;
-						}
 					} else if (SubtypeContains(thr, "Hydr")) {
-						if (0 == (engineTypes & ThrustFlags.Hydrogen)) {
+						if (0 == (engineTypes & ThrustFlags.Hydrogen))
 							// Thruster is (probably) 'hydrogen', but it was not requested
 							return false;
-						}
 					} else if (0 == (engineTypes & ThrustFlags.Ion)) {
 						// Thruster is (probably) 'ion', but it was not requested
 						return false;
 					}
 				}
 
-				if (0 == thrustDirections) {
+				if (0 == thrustDirections)
 					// All/any direction is requested
 					return true;
-				}
+
 				// Calculate direction of thrust-block according to supplied reference-block.
 				int blkDir = (int)dirRefBlk.Orientation.TransformDirectionInverse(thr.Orientation.TransformDirection(Base6Directions.Direction.Forward));
 				return 0 != ((int)thrustDirections & (1 << blkDir)); // Is direction accepted?

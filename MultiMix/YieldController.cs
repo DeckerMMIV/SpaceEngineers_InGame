@@ -21,7 +21,9 @@ namespace IngameScript {
 		class YieldModule : TickBase {
 			public YieldModule(Program p) : base(p) {}
 
-			public void Add(IEnumerable<int> method) { Execute(method.GetEnumerator()); }
+			public void Add(IEnumerable<int> method) {
+				Execute(method.GetEnumerator());
+			}
 
 			override public bool Tick() {
 				if (0 < pending.Count) {
@@ -30,21 +32,21 @@ namespace IngameScript {
 						pending.RemoveAt(0);
 						Execute(p.Value);
 					}
-					if (0 < pending.Count) {
-						if (pending.First().Key < Pgm.totalTicks + TimeSpan.TicksPerSecond) {
+					if (0 < pending.Count)
+						if (pending.First().Key < Pgm.totalTicks + TimeSpan.TicksPerSecond)
 							return true; // FastTrigger needed
-						}
-					}
 				}
 				return false;
 			}
 
 			private void Execute(IEnumerator<int> iter) {
-				if (!iter.MoveNext()) {
+				if (!iter.MoveNext())
 					iter.Dispose();
-				} else {
+				else {
 					long nextTick = Pgm.totalTicks + TimeSpan.FromMilliseconds(iter.Current).Ticks;
-					while (pending.ContainsKey(nextTick)) { nextTick++; } // Ensure no duplicate keys are added to SortedList<>.
+					while (pending.ContainsKey(nextTick)) {
+						nextTick++; // Ensure no duplicate keys are added to SortedList<>.
+					}
 					pending.Add(nextTick,iter);
 				}
 			}

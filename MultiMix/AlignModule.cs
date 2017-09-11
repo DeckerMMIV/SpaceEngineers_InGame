@@ -19,7 +19,7 @@ namespace IngameScript {
 		//-------------
 		AlignModule alignMgr = null;
 		class AlignModule : TickBase {
-			public AlignModule(Program p) : base(p) { }
+			public AlignModule(Program p) : base(p) {}
 
 			public void AddMenu(MenuManager menuMgr) {
 				menuMgr.Add(
@@ -142,21 +142,24 @@ namespace IngameScript {
 				// Credits to JoeTheDestroyer
 				// http://forums.keenswh.com/threads/aligning-ship-to-planet-gravity.7373513/#post-1286885461 
 				
-				if (!ignoreGravity) {
+				if (!ignoreGravity)
 					alignVec = sc.GetNaturalGravity();
-				}
+
 				if (ignoreGravity || Vector3D.IsZero(alignVec)) {
 					// When in zero-gravity, then use direction of ship-velocity instead
 					alignVec = sc.GetShipVelocities().LinearVelocity;
 					if (Vector3D.IsZero(alignVec)) {
 						// No usable velocity, reset all gyros
-						foreach(var g in gyros) { SetGyro(g); }
+						foreach(var g in gyros)
+							SetGyro(g);
+
 						return false;
 					}
 				}
-				if (isInverted) {
+
+				if (isInverted)
 					alignVec = Vector3D.Negate(alignVec);
-				}
+
 				// Naive attempt to avoid "Gimbal lock"
 				forceRotation = (alignVec.Dot(sc.WorldMatrix.GetOrientation().Down) < 0) ? 1 : 0;
 
@@ -167,6 +170,7 @@ namespace IngameScript {
 
 				needFastTrigger = false;
 				alignDifference = 0;
+
 				foreach(var g in gyros) {
 					g.Orientation.GetMatrix(out or);
 					localDown = Vector3D.Transform(down, MatrixD.Transpose(or));
@@ -178,21 +182,23 @@ namespace IngameScript {
 					ang = rot.Length() + forceRotation; // Naive fix for "Gimbal lock"
 					ang = Math.Atan2(ang, Math.Sqrt(Math.Max(0.0, 1.0 - ang * ang))); //More numerically stable than: ang=Math.Asin(ang)
 
-					if (ang >= 0.01) {
-						//Control speed to be proportional to distance (angle) we have left
-						ctrl_vel = Math.Max(0.01, Math.Min(maxYaw, (maxYaw * (ang / Math.PI) * ctrl_Coeff)));
-
-						rot.Normalize();
-						rot *= -ctrl_vel;
-
-						SetGyro(g, 1, true, (float)rot.GetDim(0), (float)rot.GetDim(1), (float)rot.GetDim(2));
-
-						alignDifference += ang;
-						needFastTrigger = true;
-					} else {
+					if (ang < 0.01) {
 						SetGyro(g);
+						continue;
 					}
+
+					//Control speed to be proportional to distance (angle) we have left
+					ctrl_vel = Math.Max(0.01, Math.Min(maxYaw, (maxYaw * (ang / Math.PI) * ctrl_Coeff)));
+
+					rot.Normalize();
+					rot *= -ctrl_vel;
+
+					SetGyro(g, 1, true, (float)rot.GetDim(0), (float)rot.GetDim(1), (float)rot.GetDim(2));
+
+					alignDifference += ang;
+					needFastTrigger = true;
 				}
+
 				return needFastTrigger;
 			}
 		}

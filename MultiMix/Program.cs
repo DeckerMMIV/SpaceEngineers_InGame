@@ -55,7 +55,7 @@ namespace IngameScript {
 
 		void Main2(string args) {
 			var blks = GetBlocksOfType(this, args);
-			if (blks.Count<=0) {
+			if (0 >= blks.Count) {
 				Echo($"No blocks found for; {args}");
 				return;
 			}
@@ -66,12 +66,14 @@ namespace IngameScript {
 			var acts = new List<ITerminalAction>();
 			blk.GetActions(acts);
 			Echo($"== Actions for; {args}");
-			acts.ForEach(a=>Echo(a.Id));
+			foreach(var a in acts)
+				Echo(a.Id);
 
 			var prps = new List<ITerminalProperty>();
 			blk.GetProperties(prps);
 			Echo($"== Properties for; {args}");
-			prps.ForEach(p=>Echo($"{p.Id} / {p.TypeName}"));
+			foreach(var p in prps)
+				Echo($"{p.Id} / {p.TypeName}");
 		}
 
 		long totalTicks;
@@ -92,8 +94,9 @@ namespace IngameScript {
 				lastRunSuccess = false;
 				totalTicks += Runtime.TimeSinceLastRun.Ticks;
 
-				bool updateMenu = (menuUpdateTick < totalTicks);
-				if (args.Length > 0) { updateMenu |= ProgramCommand(args); }
+				bool updateMenu = menuUpdateTick < totalTicks;
+				if (args.Length > 0)
+					updateMenu |= ProgramCommand(args);
 
 				//
 				fastTrigger |= Tick(alignMgr);
@@ -110,16 +113,17 @@ namespace IngameScript {
 			if (null!=timerBlock) {
 				//if (!timerBlock.StillExist()) { return; } // Failure!
 				// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
-				if (fastTrigger) { triggerNow.Apply(timerBlock); }
-				else { timerBlock.ApplyAction("Start"); }
+				if (fastTrigger)
+					triggerNow.Apply(timerBlock);
+				else
+					timerBlock.ApplyAction("Start");
 			}
 			lastRunSuccess = true;
 		}
 
 		void Init() {
-			if (!NameContains(Me, MultiMix_UsedBlocks)) {
+			if (!NameContains(Me, MultiMix_UsedBlocks))
 				throw new Exception($"Programmable block does not have '{MultiMix_UsedBlocks}' in its custom-name.\nDid you read the instructions?");
-			}
 
 			InitTimerBlock(MultiMix_UsedBlocks);
 
@@ -127,11 +131,13 @@ namespace IngameScript {
 			lcdCenter.Clear();
 			lcdRight.Clear();
 			ActionOnBlocksOfType<IMyTextPanel>(this, Me, p=>{
-				if (p.IsWorking && !NameContains(p, MultiMix_IgnoreBlocks)) {
-					if (NameContains(p, "Center")) lcdCenter.Add(p);
-					else if (NameContains(p, "Left")) lcdLeft.Add(p);
-					else if (NameContains(p, "Right")) lcdRight.Add(p);
-				}
+				if (p.IsWorking && !NameContains(p, MultiMix_IgnoreBlocks))
+					if (NameContains(p, "Center"))
+						lcdCenter.Add(p);
+					else if (NameContains(p, "Left"))
+						lcdLeft.Add(p);
+					else if (NameContains(p, "Right"))
+						lcdRight.Add(p);
 			});
 			lcdLeft.ShowPublicText("Initializing: Left panel(s)");
 			lcdCenter.ShowPublicText("Initializing: Center panel(s)");
@@ -171,15 +177,18 @@ namespace IngameScript {
 			triggerNow = null;
 			int cnt = 0;
 			ActionOnBlocksOfType<IMyTimerBlock>(this, Me, b=>{
-				if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,MultiMix_IgnoreBlocks)) { ToType(b, ref timerBlock); cnt++; }
+				if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,MultiMix_IgnoreBlocks)) {
+					ToType(b, ref timerBlock);
+					cnt++;
+				}
 			});
 			if (null == timerBlock) {
 				Echo($"WARNING: TimerBlock for PB not found. Name should contain '{tbName}' and block must be enabled.");
 				return;
 			}
-			if (1 != cnt) {
+			if (1 != cnt)
 				throw new Exception($"More than a required just one TimerBlock found, where '{tbName}' is contained in their names.");
-			}
+
 			timerBlock.TriggerDelay = 1;
 			triggerNow = timerBlock.GetActionWithName("TriggerNow");
 		}
@@ -192,9 +201,8 @@ namespace IngameScript {
 			case "HELP":
 				var sb = new StringBuilder();
 				sb.Append("== Direct Commands ==");
-				foreach(string txt in menuMgr.AllDirectCommands()) {
+				foreach(string txt in menuMgr.AllDirectCommands())
 					sb.Append($"\n  {txt}");
-				}
 				sb.Append("\n======");
 				Echo(sb.ToString());
 				return true;
@@ -216,20 +224,19 @@ namespace IngameScript {
 			//
 			MenuItem tt;
 			menuMgr.Add(tt=Menu("Misc. operations"));
-			if (null!=yieldMgr) {
+			if (null!=yieldMgr)
 				tt.Add(
 					Menu(() => $"Unlock from connector{ConnectorUnlockInfo}")
 						.Enter("connectorUnlock", () => yieldMgr.Add(UnlockFromConnector())),
 					Menu(() => $"Lock-on to connector{ConnectorLockInfo}")
 						.Enter("connectorLock", () => yieldMgr.Add(AttemptLockToConnector()))
 				);
-			}
+
 			tt.Add(
 				Menu("Radio: Hangar doors toggle").Enter("radioHangarDoors", () => {
 					var lst = GetBlocksOfType(this,"radioantenna",Me);
-					if (lst.Count > 0) {
+					if (0 < lst.Count)
 						(lst[0] as IMyRadioAntenna)?.TransmitMessage("HangarDoors", MyTransmitTarget.Default | MyTransmitTarget.Neutral);
-					}
 				})
 			);
 		}
@@ -242,13 +249,16 @@ namespace IngameScript {
 				shipCtrl = null;
 				var lst = new List<IMyShipController>();
 				GridTerminalSystem.GetBlocksOfType(lst, b => {
-					if (!b.IsWorking || !SameGrid(b, Me)) return false;
-					if (null != primaryName && NameContains(b, primaryName)) shipCtrl = b;
+					if (!b.IsWorking || !SameGrid(b, Me))
+						return false;
+					if (null != primaryName && NameContains(b, primaryName))
+						shipCtrl = b;
 					return (b as IMyShipController).ControlThrusters;
 				});
-				if (null == shipCtrl && 0 < lst.Count) shipCtrl = lst[0];
+				if (null == shipCtrl && 0 < lst.Count)
+					shipCtrl = lst[0];
 			}
-			return (shipCtrl as IMyShipController);
+			return shipCtrl as IMyShipController;
 		}
 
 		//---------------
@@ -265,7 +275,8 @@ namespace IngameScript {
 
 			bool isLocked = false;
 			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => {
-				if (MyShipConnectorStatus.Connected == b.Status) { isLocked = true; }
+				if (MyShipConnectorStatus.Connected == b.Status)
+					isLocked = true;
 			});
 			if (!isLocked) {
 				ConnectorUnlockInfo="Not locked";
@@ -276,15 +287,21 @@ namespace IngameScript {
 			ConnectorUnlockInfo="Attempting unlock";
 			yield return 10;
 
-			ActionOnBlocksOfType<IMyBatteryBlock>(this, Me, b => { b.OnlyDischarge = true; } );
+			ActionOnBlocksOfType<IMyBatteryBlock>(this, Me, b => {
+				b.OnlyDischarge = true;
+			});
 			yield return 100;
 
 			IMyShipController rc = GetShipController();
-			if (null != rc) { rc.DampenersOverride = true; }
+			if (null != rc)
+				rc.DampenersOverride = true;
 			yield return 10;
 
 			float atmosphere = 0;
-			ActionOnBlocksOfType<IMyParachute>(this, Me, b => { if (b.IsWorking) { atmosphere = Math.Max(atmosphere, b.Atmosphere); } });
+			ActionOnBlocksOfType<IMyParachute>(this, Me, b => {
+				if (b.IsWorking)
+					atmosphere = Math.Max(atmosphere, b.Atmosphere);
+			});
 			ThrustFlags tf = atmosphere > 0.3 ? ThrustFlags.Atmospheric : ThrustFlags.Ion;
 			SetEnabled(GetThrustBlocks(tf, this, Me), true);
 			yield return 100;
@@ -307,7 +324,10 @@ namespace IngameScript {
 			ConnectorUnlockInfo="";
 
 			bool isUnlocked = true;
-			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => { if (MyShipConnectorStatus.Connected == b.Status) { isUnlocked = false; } });
+			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => {
+				if (MyShipConnectorStatus.Connected == b.Status)
+					isUnlocked = false;
+			});
 			if (!isUnlocked) {
 				ConnectorLockInfo="Already locked";
 				yield return 2000;
@@ -317,7 +337,10 @@ namespace IngameScript {
 			ConnectorLockInfo="Attempting lock";
 			yield return 10;
 
-			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => { b.PullStrength = 0.0001f; b.Enabled = true; } );
+			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => {
+				b.PullStrength = 0.0001f;
+				b.Enabled = true;
+			});
 			yield return 100;
 			
 			int maxAttempts = 10;
@@ -325,15 +348,16 @@ namespace IngameScript {
 			List<IMyTerminalBlock> lst = new List<IMyTerminalBlock>();
 			do {
 				ConnectorLockInfo=$"Attempting ({maxAttempts})";
-				GetBlocksOfType(lst,this,"connector",Me).ForEach(b => {
+				foreach(var b in GetBlocksOfType(lst,this,"connector",Me)) {
 					var c = b as IMyShipConnector;
-					if (MyShipConnectorStatus.Connected == c.Status) { isLocked = true; }
-					else { c.Connect(); }
-				});
-				lst.Clear();
-				if (!isLocked) {
-					yield return 100;
+					if (MyShipConnectorStatus.Connected == c.Status)
+						isLocked = true;
+					else
+						c.Connect();
 				}
+				lst.Clear();
+				if (!isLocked)
+					yield return 100;
 			} while (!isLocked && --maxAttempts > 0);
 			if (!isLocked) {
 				ConnectorLockInfo="Failed to lock";
@@ -343,13 +367,16 @@ namespace IngameScript {
 			}
 			yield return 100;
 
-			if (null!=alignMgr) alignMgr.Active=false;
+			if (null!=alignMgr)
+				alignMgr.Active=false;
 			yield return 10;
 
 			SetEnabled(GetThrustBlocks(ThrustFlags.All, this, Me), false);
 			yield return 100;
 
-			ActionOnBlocksOfType<IMyBatteryBlock>(this,Me,b => { b.OnlyRecharge = true; } );
+			ActionOnBlocksOfType<IMyBatteryBlock>(this,Me,b => {
+				b.OnlyRecharge = true;
+			});
 			ConnectorLockInfo="Successful lock";
 			yield return 5000;
 			ConnectorLockInfo="";

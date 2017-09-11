@@ -18,7 +18,8 @@ namespace IngameScript {
 	partial class Program {
 		//-------------
 		bool Tick(TickBase obj) {
-			if (null != obj && obj.Active) { return obj.Tick(); }
+			if (null != obj && obj.Active)
+				return obj.Tick();
 			return false;
 		}
 

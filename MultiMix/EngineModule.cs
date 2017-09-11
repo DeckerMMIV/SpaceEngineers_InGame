@@ -19,7 +19,8 @@ namespace IngameScript {
 		//-------------
 		EngineModule engineMgr = null;
 		class EngineModule : TickBase, IMenuCollector {
-			public EngineModule(Program p):base(p){}
+			public EngineModule(Program p) : base(p) {}
+
 			override public bool Tick() { return false; }
 
 			public void Refresh(IMyTerminalBlock _myGrid, IMyShipController _sc) {
@@ -28,9 +29,8 @@ namespace IngameScript {
 			}
 
 			public void AddMenu(MenuManager menuMgr) {
-				if (GetThrustBlocks(ThrustFlags.All, Pgm, Me).Count<=0) {
+				if (GetThrustBlocks(ThrustFlags.All, Pgm, Me).Count <= 0)
 					return; // No thrusters found
-				}
 
 				Action<ThrustFlags> tsToggle = (tf) => {
 					SetEnabledAbsToggle(GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController()));
@@ -71,29 +71,31 @@ namespace IngameScript {
 					)
 				);
 
-				if (null==Pgm.GetShipController()) {
+				if (null == Pgm.GetShipController())
 					menuMgr.WarningText += "\n ShipController missing. Some features unavailable!";
-				} else {
+				else {
 					Action<ThrustFlags, int> tsPower = (tf, m) => {
 						var lst = GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController());
 						if (0 != m) {
-							int o=0;
-							foreach(var b in lst) {
+							int o = 0;
+							foreach(var b in lst)
 								o += (int)((b as IMyThrust).GetValueFloat("Override"));
-							}
-							if (100==m) {
-								m = o>0 ? 0 : m;
-							} else {
-								if (0 < lst.Count) { o /= lst.Count; }
+
+							if (100 == m)
+								m = 0 < o ? 0 : m;
+							else {
+								if (0 < lst.Count)
+									o /= lst.Count;
 								m = Math.Min(100, Math.Max(0, o + m * 10));
 							}
 						}
 						SetThrustAbsPct(lst, m);
 					};
 
-					int[] pad = new[] {p+2,p+1,p+3,p+1,p+2,p+0};
 					MenuItem md = Menu("Directions");
 					MenuItem mo = Menu("Override thrust");
+					int[] pad = new[] {p+2,p+1,p+3,p+1,p+2,p+0};
+
 					int i=0;
 					foreach(string txt in Pgm.DIRECTIONS) {
 						ThrustFlags tf = (ThrustFlags)(1<<i);
@@ -114,6 +116,7 @@ namespace IngameScript {
 								.Back(()=>tsPower(tf,0))
 						);
 					}
+
 					tt.Add(md, mo);
 				}
 			}
@@ -126,18 +129,24 @@ namespace IngameScript {
 			public void CollectSetup() {
 				namedCounters.Clear();
 			}
-			public void CollectTeardown() { }
+			public void CollectTeardown() {}
 
 			public void CollectBlock(IMyTerminalBlock blk) {
-				if (!SameGrid(blk, myGrid) || !blk.IsFunctional) return;
+				if (!SameGrid(blk, myGrid) || !blk.IsFunctional)
+					return;
+
 				var thr = blk as IMyThrust;
-				if (null == thr) return;
+				if (null == thr)
+					return;
 
 				ThrustFlags flags = 0;
 
-				if (SubtypeContains(blk, "Atmos")) flags |= ThrustFlags.Atmospheric;
-				else if (SubtypeContains(blk, "Hydro")) flags |= ThrustFlags.Hydrogen;
-				else flags |= ThrustFlags.Ion;
+				if (SubtypeContains(blk, "Atmos"))
+					flags |= ThrustFlags.Atmospheric;
+				else if (SubtypeContains(blk, "Hydro"))
+					flags |= ThrustFlags.Hydrogen;
+				else
+					flags |= ThrustFlags.Ion;
 
 				if (null != dirRefBlk) {
 					// Calculate direction of thrust-block according to supplied reference-block.
@@ -161,10 +170,14 @@ namespace IngameScript {
 			}
 			void Inc(string name, IMyThrust thr) {
 				Counters cnt;
-				if (!namedCounters.TryGetValue(name, out cnt)) {
+				if (!namedCounters.TryGetValue(name, out cnt))
 					namedCounters.Add(name, cnt = new Counters());
-				}
-				if (thr.IsWorking) cnt.enabled++; else cnt.disabled++;
+
+				if (thr.IsWorking)
+					cnt.enabled++;
+				else
+					cnt.disabled++;
+
 				cnt.curThrust += thr.ThrustOverride;
 				cnt.maxThrust += thr.MaxThrust;
 				cnt.maxEffThrust += thr.MaxEffectiveThrust;
@@ -174,26 +187,21 @@ namespace IngameScript {
 				string nme = $"{pfx}:".PadRight(pad);
 				Counters cnt;
 				switch (type) {
-				case 1: {
+				case 1:
 					// Number of thrusters which are on/off
-					if (!namedCounters.TryGetValue(pfx, out cnt)) {
+					if (!namedCounters.TryGetValue(pfx, out cnt))
 						return $"{nme}-- / --";
-					} else if (cnt.disabled == 0) {
+					if (cnt.disabled == 0)
 						return $"{nme}ON {cnt.enabled} / --";
-					} else if (cnt.enabled == 0) {
+					if (cnt.enabled == 0)
 						return $"{nme}-- / {cnt.disabled} OFF";
-					} else {
-						return $"{nme}on {cnt.enabled} / {cnt.disabled} off";
-					}
-				}
-				case 2: {
+					return $"{nme}on {cnt.enabled} / {cnt.disabled} off";
+				case 2:
 					// The current override value of thrusters
-					if (!namedCounters.TryGetValue(pfx, out cnt)) {
+					if (!namedCounters.TryGetValue(pfx, out cnt))
 						return $"{nme}???%  ??? N";
-					}
-					float pct = 0 < cnt.maxThrust ? (100 * cnt.curThrust) / cnt.maxThrust : 0;
+					float pct = 0 >= cnt.maxThrust ? 0 : cnt.curThrust / cnt.maxThrust * 100;
 					return $"{nme}{pct:F0}%  {cnt.curThrust:F0} N";
-				}
 				}
 				return $"{nme}???";
 			}

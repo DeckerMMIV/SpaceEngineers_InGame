@@ -20,8 +20,10 @@ namespace IngameScript {
 		public static T NextBlockInGrid<T>(Program pgm, IMyTerminalBlock gridRef, T curBlk, int dir) where T : class, IMyTerminalBlock {
 			var lst = new List<T>();
 			pgm.GridTerminalSystem.GetBlocksOfType(lst,b=>(null==gridRef || SameGrid(gridRef,b)));
-			if (lst.Count<=0) { return null; }
-			if (null==curBlk) { return lst[0]; }
+			if (lst.Count<=0)
+				return null;
+			if (null==curBlk)
+				return lst[0];
 			int i=0;
 			while (lst[i].EntityId != curBlk.EntityId && ++i < lst.Count) {}
 			return lst[(i+dir) % lst.Count];
@@ -30,11 +32,18 @@ namespace IngameScript {
 		//------
 
 		public static void ActionOnBlocksOfType<T>(Program pgm, Action<T> act) where T : class, IMyTerminalBlock {
-			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => { act(b as T); return false; } );
+			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => {
+				act(b as T);
+				return false;
+			});
 		}
 
 		public static void ActionOnBlocksOfType<T>(Program pgm, IMyTerminalBlock gridRef, Action<T> act) where T : class, IMyTerminalBlock {
-			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => { if (SameGrid(gridRef,b)) { act(b as T); } return false; } );
+			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => {
+				if (SameGrid(gridRef,b))
+					act(b as T);
+				return false;
+			});
 		}
 
 		//------
@@ -42,7 +51,9 @@ namespace IngameScript {
 		public static void GatherBlocks(Program pgm, List<Func<IMyTerminalBlock, bool>> pipeline) {
 			pgm.GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(null, b => {
 				// Iterate through pipeline, until a segment returns `false`
-				foreach (var f in pipeline) { if (!f(b)) break; }
+				foreach (var f in pipeline)
+					if (!f(b))
+						break;
 				return false;
 			});
 		}

@@ -18,20 +18,27 @@ namespace IngameScript {
 	partial class Program {
 		//-------------
 		class OutputPanel {
-			public void Add(IMyTextPanel p) { lcds.Add(p); }
+			public void Add(IMyTextPanel p) {
+				lcds.Add(p);
+			}
 
-			public void Clear() { lcds.Clear(); }
+			public void Clear() {
+				lcds.Clear();
+			}
 
 			public void WritePublicText(StringBuilder sb) {
 				var txt = sb.ToString();
 				sb.Clear();
-				foreach(var p in lcds) { p.WritePublicText(txt); }
+				foreach(var p in lcds)
+					p.WritePublicText(txt);
 			}
 
 			public void ShowPublicText(string txt=null) {
 				foreach(var p in lcds) {
-					if (null != txt) { p.WritePublicText(txt); }
-					if (!p.ShowText) { p.ShowPublicTextOnScreen(); }
+					if (null != txt)
+						p.WritePublicText(txt);
+					if (!p.ShowText)
+						p.ShowPublicTextOnScreen();
 				}
 			}
 

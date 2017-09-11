@@ -19,7 +19,7 @@ namespace IngameScript {
 		//-------------
 		AscendDecendModule ascDecMgr = null;
 		class AscendDecendModule : TickBase {
-			public AscendDecendModule(Program p) : base(p) { }
+			public AscendDecendModule(Program p) : base(p) {}
 
 			public void AddMenu(MenuManager menuMgr) {
 				menuMgr.Add(
@@ -85,13 +85,14 @@ namespace IngameScript {
 				align = _align;
 				sc = _sc ?? Pgm.GetShipController(MultiMix_UsedBlocks);
 
-				RefreshThrustsList((null != _align ? _align.RocketMode : false));
+				RefreshThrustsList(null != _align ? _align.RocketMode : false);
 
 				hydrogenTanks.Clear();
 
-				if (null != downCamera) { downCamera.EnableRaycast = false; }
-				downCamera = null;
+				if (null != downCamera)
+					downCamera.EnableRaycast = false;
 
+				downCamera = null;
 				parachute = null;
 
 				IMyGasTank h = null;
@@ -106,9 +107,8 @@ namespace IngameScript {
 					b => { if (ToType(b, ref p) && p.IsWorking) { parachute=p; return false; } return true; },
 				});
 
-				if (null == stateMachine) {
+				if (null == stateMachine)
 					SetRunState(false);
-				}
 			}
 
 			const int PRIO_ATMOS = 1, PRIO_ION = 2, PRIO_HYDRO = 3;
@@ -122,20 +122,25 @@ namespace IngameScript {
 				int prio;
 				Dictionary<string, List<IMyThrust>> thrType;
 				List<IMyThrust> thrList;
+
 				var tmpLst = GetThrustBlocks(ThrustFlags.AllEngines | (likeRocket ? ThrustFlags.PushForward : ThrustFlags.PushUpward), Pgm, Me, sc);
 				foreach(var b in tmpLst) {
-					if (!b.IsFunctional || NameContains(b, MultiMix_IgnoreBlocks)) return;
+					if (!b.IsFunctional || NameContains(b, MultiMix_IgnoreBlocks))
+						continue;
 
-					if (SubtypeContains(b, "Atmos")) { prio = PRIO_ATMOS; }
-					else if (SubtypeContains(b, "Hydro")) { prio = PRIO_HYDRO; }
-					else { prio = PRIO_ION; }
+					if (SubtypeContains(b, "Atmos"))
+						prio = PRIO_ATMOS;
+					else if (SubtypeContains(b, "Hydro"))
+						prio = PRIO_HYDRO;
+					else
+						prio = PRIO_ION;
 
-					if (!thrusts.TryGetValue(prio, out thrType)) {
+					if (!thrusts.TryGetValue(prio, out thrType))
 						thrusts.Add(prio, thrType = new Dictionary<string, List<IMyThrust>>());
-					}
-					if (!thrType.TryGetValue(b.BlockDefinition.SubtypeId, out thrList)) {
+
+					if (!thrType.TryGetValue(b.BlockDefinition.SubtypeId, out thrList))
 						thrType.Add(b.BlockDefinition.SubtypeId, thrList = new List<IMyThrust>());
-					}
+
 					thrList.Add(b as IMyThrust);
 				}
 			}
@@ -169,8 +174,12 @@ namespace IngameScript {
 				}
 
 				prevAltitude = altitudeSurface;
-				if (!sc.TryGetPlanetElevation(MyPlanetElevation.Surface, out altitudeSurface)) { altitudeSurface = double.NaN; altitudeDiff = double.NaN; }
-				else { altitudeDiff = altitudeSurface - prevAltitude; }
+				if (!sc.TryGetPlanetElevation(MyPlanetElevation.Surface, out altitudeSurface)) {
+					altitudeSurface = double.NaN;
+					altitudeDiff = double.NaN;
+				} else {
+					altitudeDiff = altitudeSurface - prevAltitude;
+				}
 
 				if (null != downCamera) {
 					if (downCamera.CanScan(1000)) {
@@ -190,12 +199,14 @@ namespace IngameScript {
 			}
 
 			string NumStr(double value, string unit) {
-				double absVal = Math.Abs(value); string fmt;
-				if (absVal < 1000) { fmt = "{0:F0} {1}"; }
-				else if (absVal < 1000000) { fmt = "{0:F1} k{1}"; value /= 1000; }
-				else if (absVal < 1000000000) { fmt = "{0:F2} M{1}"; value /= 1000000; }
-				else { fmt = "{0:F2} G{1}"; value /= 1000000000; }
-				return string.Format(fmt, value, unit);
+				double absVal = Math.Abs(value);
+				if (absVal < 1000)
+					return $"{value:F0} {unit}";
+				if (absVal < 1000000)
+					return $"{value/1000:F1} k{unit}";
+				if (absVal < 1000000000)
+					return $"{value/1000000:F2} M{unit}";
+				return $"{value/1000000000:F2} G{unit}";
 			}
 
 			StringBuilder sb1 = new StringBuilder();
@@ -247,6 +258,7 @@ namespace IngameScript {
 						}
 						hydroTanksPctFilled /= hydrogenTanks.Count;
 					}
+
 					AppendPctBar(sb1, $"\n Hydr:", -hydroTanksPctFilled, 30, false).Append($" {hydroTanksPctFilled * 100:F1}% in {hydroTanksGiving} tanks");
 				}
 
@@ -265,7 +277,10 @@ namespace IngameScript {
 						}
 						battAllCharging = battNumCharging == batteries.Count;
 					}
-					AppendPctBar(sb1, "\n Batt:", (battStoredPower / battMaxPower) * (battAllCharging ? 1 : -1), 30, false); if (battAllCharging) { sb1.Append($" {chargeAnim[execCount & 3]} Recharging"); }
+
+					AppendPctBar(sb1, "\n Batt:", (battStoredPower / battMaxPower) * (battAllCharging ? 1 : -1), 30, false);
+					if (battAllCharging)
+						sb1.Append($" {chargeAnim[execCount & 3]} Recharging");
 				}
 
 				lcd.WritePublicText(sb1);
@@ -288,12 +303,8 @@ namespace IngameScript {
 				if (enable && null == stateMachine) {
 					abortStateMachine = false;
 					switch (OperationMode) {
-					case Mode.Ascend:
-						stateMachine = AscendStateMachine().GetEnumerator();
-						break;
-					case Mode.Descend:
-						stateMachine = DescendStateMachine().GetEnumerator();
-						break;
+					case Mode.Ascend: stateMachine = AscendStateMachine().GetEnumerator(); break;
+					case Mode.Descend: stateMachine = DescendStateMachine().GetEnumerator(); break;
 					}
 					nextTick = 0;
 				} else if (!enable) {
@@ -398,7 +409,11 @@ namespace IngameScript {
 			}
 
 			double brakeDistanceFactor = 1.1;
-			public double BrakeDistanceFactor { get { return brakeDistanceFactor; } set { brakeDistanceFactor = Math.Max(1.01, value); } }
+			public double BrakeDistanceFactor {
+				get { return brakeDistanceFactor; }
+				set { brakeDistanceFactor = Math.Max(1.01, value); }
+			}
+
 			IEnumerable<int> DescendStateMachine() {
 				sb2.Clear();
 
@@ -419,7 +434,8 @@ namespace IngameScript {
 				//
 				curState = "FreeFalling";
 				while (State_AboveBrakeDistance(10)) {
-					if (currSpeed > MaxSpeed) { break; }
+					if (currSpeed > MaxSpeed)
+						break;
 					yield return 1000;
 					if (abortStateMachine) yield break;
 				}
@@ -435,9 +451,8 @@ namespace IngameScript {
 				curState = "MaintainMaxSpeed";
 				while (State_AboveBrakeDistance(BrakeDistanceFactor)) {
 					// Maintain max speed
-					if (align.IsAligned) {
+					if (align.IsAligned)
 						ReduceToMaxSpeed();
-					}
 					yield return 300;
 					if (abortStateMachine) yield break;
 				}
@@ -469,11 +484,9 @@ namespace IngameScript {
 			bool State_AboveBrakeDistance(double altitudeFactor) {
 				UpdateTelemetry(true);
 				UpdateBrakeDistance();
-				if (!double.IsNaN(altitudeSurface)) {
-					if (brakeDistance * altitudeFactor > altitudeSurface) {
+				if (!double.IsNaN(altitudeSurface))
+					if (brakeDistance * altitudeFactor > altitudeSurface)
 						return false;
-					}
-				}
 				return true;
 			}
 
@@ -502,9 +515,8 @@ namespace IngameScript {
 							float eff = thrst.MaxEffectiveThrust / thrst.MaxThrust;
 							if (eff >= minEff) {
 								int cnt = 0;
-								foreach(var t in thrsts) {
+								foreach(var t in thrsts)
 									cnt += t.IsWorking ? 1 : 0;
-								}
 								totalEffThrust += thrst.MaxEffectiveThrust * cnt;
 							}
 						}
@@ -545,27 +557,25 @@ namespace IngameScript {
 				sumThrustCurEff = 0;
 				string typeName;
 				for (var thrPrio = thrusts.GetEnumerator(); thrPrio.MoveNext();) {
-					if (!thrustPrioNames.TryGetValue(thrPrio.Current.Key, out typeName)) { typeName = "???"; }
+					if (!thrustPrioNames.TryGetValue(thrPrio.Current.Key, out typeName))
+						typeName = "???";
 
 					float minEff = GetRequiredMinimumEffectiveThrust(thrPrio.Current.Key);
 
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();) {
 						var thrsts = thrType.Current.Value;
-						if (thrsts.Count <= 0) {
+						if (thrsts.Count <= 0)
 							continue;
-						}
 
 						var thrst = thrsts[0];
-
 						float pct = 0;
 						float eff = thrst.MaxEffectiveThrust / thrst.MaxThrust;
 						if (eff >= minEff) {
 							localThrustMax = thrst.MaxEffectiveThrust * thrsts.Count;
 							pct = (localThrustMax > 0 ? Math.Min(1f, remainThrustNeeded / localThrustMax) : 0);
 
-							if (currSpeed > 0) {
+							if (currSpeed > 0)
 								remainThrustNeeded = Math.Max(0, remainThrustNeeded - (localThrustMax * pct));
-							}
 						}
 
 						float ovr = thrst.GetMaximum<float>("Override") * pct;
@@ -583,13 +593,11 @@ namespace IngameScript {
 
 			public void ThrustZero() {
 				thrustPct = remainThrustNeeded = totalThrustWanted = 0;
-				for (var thrPrio = thrusts.GetEnumerator(); thrPrio.MoveNext();) {
-					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();) {
-						foreach(var t in thrType.Current.Value) {
-							if (t.ThrustOverride > 0) { t.SetValueFloat("Override", 0); }
-						}
-					}
-				}
+				for (var thrPrio = thrusts.GetEnumerator(); thrPrio.MoveNext();)
+					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();)
+						foreach(var t in thrType.Current.Value)
+							if (t.ThrustOverride > 0)
+								t.SetValueFloat("Override", 0);
 			}
 
 			public void ThrustStatus() {
@@ -598,30 +606,29 @@ namespace IngameScript {
 				sumThrustCurEff = 0;
 				string typeName;
 				for (var thrPrio = thrusts.GetEnumerator(); thrPrio.MoveNext();) {
-					if (!thrustPrioNames.TryGetValue(thrPrio.Current.Key, out typeName)) { typeName = "???"; }
+					if (!thrustPrioNames.TryGetValue(thrPrio.Current.Key, out typeName))
+						typeName = "???";
 
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();) {
 						var thrsts = thrType.Current.Value;
-						if (thrsts.Count <= 0) {
+						if (thrsts.Count <= 0)
 							continue;
-						}
 
 						var thrst = thrsts[0];
-
 						localThrustCur = 0;
-						foreach(var t in thrsts) { localThrustCur += t.CurrentThrust; }
+						foreach(var t in thrsts)
+							localThrustCur += t.CurrentThrust;
 						sumThrustCurEff += localThrustCur;
 
 						localThrustMax = thrst.MaxThrust * thrsts.Count;
 						float pct = (localThrustMax > 0 ? Math.Min(1f, localThrustCur / localThrustMax) : 0);
 						AppendPctBar(sb2, "\n Thr:", pct, barLen, false);
 
-						if (thrst.MaxThrust > 0) {
-							float eff = thrst.MaxEffectiveThrust / thrst.MaxThrust;
-							AppendPctBar(sb2, " Eff:", eff, barLen, false, true);
-						} else {
+						if (thrst.MaxThrust <= 0)
 							sb2.Append(" Eff:[---Unknown---]");
-						}
+						else
+							AppendPctBar(sb2, " Eff:", thrst.MaxEffectiveThrust / thrst.MaxThrust, barLen, false, true);
+
 						sb2.Append($" {typeName}");
 					}
 				}

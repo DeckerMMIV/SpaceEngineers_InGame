@@ -20,13 +20,14 @@ namespace IngameScript {
 		ToolsModule toolsMgr = null;
 		class ToolsModule : TickBase, IMenuCollector {
 			public ToolsModule(Program p) : base(p) {}
+
 			override public bool Tick() { return false; }
 
 			public void AddMenu(MenuManager menuMgr) {
 				var tls = Menu("Tools");
 				bool foundTools = false;
 
-				foreach (string tool in new[] { "Grinder", "Welder", "OreDetector", "Drill" }) {
+				foreach (string tool in new[] { "Grinder", "Welder", "OreDetector", "Drill" })
 					if (HasTool(tool)) {
 						foundTools = true;
 						tls.Add(
@@ -38,17 +39,20 @@ namespace IngameScript {
 								.Right(() => ToolDistance(tool, 1))
 						);
 					}
-				}
 
 				if (HasTool("Drill")) {
 					Action<int> yawRotate = (dir) => {
 						ActionOnBlocksOfType<IMyGyro>(Pgm, Me, g=>{
 							if (NameContains(g, "DRILL")) {
 								float yawRpm = g.Yaw;
-								if (0 == dir) {
-									if (g.Enabled) { g.Enabled = false; }
-									else { yawRpm = -yawRpm; g.Enabled = true; }
-								} else {
+								if (0 == dir)
+									if (g.Enabled)
+										g.Enabled = false;
+									else {
+										yawRpm = -yawRpm;
+										g.Enabled = true;
+									}
+								else {
 									yawRpm = Math.Sign(dir) * Math.Abs(yawRpm);
 									g.Enabled = true;
 								}
@@ -86,6 +90,7 @@ namespace IngameScript {
 								.Back(()=>SensorProp(j,0))
 						);
 					}
+
 					i=10;
 					MenuItem to=Menu("Object detection");
 					foreach(string txt in new[] {"Large ships","Small ships","Stations","Subgrids","Players","Asteroids","Floating obj."}) {
@@ -95,6 +100,7 @@ namespace IngameScript {
 								.Enter(()=>SensorProp(j,0))
 						);
 					}
+
 					i=20;
 					MenuItem tf=Menu("Faction recognition");
 					foreach(string txt in new[] {"Owner","Friendly","Neutral","Enemy"}) {
@@ -104,6 +110,7 @@ namespace IngameScript {
 								.Enter(()=>SensorProp(j,0))
 						);
 					}
+
 					tls.Add(
 						Menu("Sensors").Add(
 							Menu(()=>SensorText("Selected",0,0))
@@ -125,6 +132,7 @@ namespace IngameScript {
 							.Right(()=>ProjectorProp(0,1))
 							.Enter(()=>ToggleProjector())
 					);
+
 					int i=0;
 					foreach(string txt in new[] {"Offset X","Offset Y","Offset Z","Rotate X","Rotate Y","Rotate Z"}) {
 						int j=++i;
@@ -135,17 +143,20 @@ namespace IngameScript {
 								.Back(()=>ProjectorProp(j,0))
 						);
 					}
+
 					tls.Add(tp);
 				}
 
-				if (foundTools) {
+				if (foundTools)
 					menuMgr.Add(tls);
-				}
 			}
 
 			public void Refresh() {
 				CollectSetup();
-				Gts.GetBlocksOfType<IMyTerminalBlock>(null, b => { CollectBlock(b); return false; });
+				Gts.GetBlocksOfType<IMyTerminalBlock>(null, b => {
+					CollectBlock(b);
+					return false;
+				});
 				CollectTeardown();
 				projector=null;
 				sensor=null;
@@ -154,21 +165,27 @@ namespace IngameScript {
 			public bool ToolToggle(string toolName) {
 				return SetEnabledAbsToggle(GetBlocksOfType(Pgm,toolName,Me));
 			}
+
 			public bool ToolEnable(string toolName, bool enable) {
 				return SetEnabled(GetBlocksOfType(Pgm,toolName,Me), enable);
 			}
+
 			public bool HasTool(string toolName) {
 				return namedCounters.ContainsKey(toolName);
 			}
+
 			public void ToolDistance(string toolName, int dir) {
 				var blks = GetBlocksOfType(Pgm,toolName,Me);
-				if (blks.Count<=0) { return; }
+				if (0 >= blks.Count)
+					return;
+
 				try {
 					blks[0].GetProperty("BeamLength");
 					var blk = blks[0];
 					float beamLength = blk.GetValueFloat("BeamLength");
 					beamLength = MathHelper.Clamp(beamLength+dir, 1, 20);
-					foreach(var b in blks) { b.SetValueFloat("BeamLength",beamLength); }
+					foreach(var b in blks)
+						b.SetValueFloat("BeamLength",beamLength);
 				} catch(Exception) {
 					// Ignored
 				}
@@ -180,13 +197,18 @@ namespace IngameScript {
 			}
 
 			public bool ToggleSensor() {
-				if (null==sensor) { return false; }
+				if (null==sensor)
+					return false;
 				return sensor.Enabled = !sensor.Enabled;
 			}
 
 			public void SensorProp(int propId, int propVal) {
-				if (0==propId) { sensor = NextBlockInGrid(Pgm,Me,sensor,propVal); return; }
-				if (null==sensor) { return; }
+				if (0==propId) {
+					sensor = NextBlockInGrid(Pgm,Me,sensor,propVal);
+					return;
+				}
+				if (null==sensor)
+					return;
 
 				Func<float,int,float> ext = (v,d) => { return d==0 ? 1 : MathHelper.Clamp(v+d,1,50); };
 
@@ -214,7 +236,7 @@ namespace IngameScript {
 			public string SensorText(string lbl, int propId, int p=16) {
 				string mfx="", sfx= (0==propId) ? "(no sensor selected)" : "???";
 				if (null!=sensor) {
-					Func<bool,string> yn=(b)=>{ return b?"YES/--":"--/no"; };
+					Func<bool,string> yn = (b) => { return b?"YES/--":"--/no"; };
 
 					switch(propId) {
 					case 0:
@@ -250,13 +272,18 @@ namespace IngameScript {
 			}
 
 			public bool ToggleProjector() { 
-				if (null==projector) { return false; }
+				if (null==projector)
+					return false;
 				return (projector.Enabled = !projector.Enabled) && projector.IsProjecting;
 			}
 
 			public void ProjectorProp(int propId, int propVal) {
-				if (0==propId) { projector = NextBlockInGrid(Pgm,Me,projector,propVal); return; }
-				if (null==projector) { return; }
+				if (0==propId) {
+					projector = NextBlockInGrid(Pgm,Me,projector,propVal);
+					return;
+				}
+				if (null==projector)
+					return;
 
 				Func<Vector3I,int,int,Func<int,int,int>,Vector3I> updVec = (vec,idx,dir,mod) => {
 					switch (idx) {
@@ -315,31 +342,31 @@ namespace IngameScript {
 			public void CollectBlock(IMyTerminalBlock blk) {
 				var fb = blk as IMyFunctionalBlock;
 				if (null==fb || !SameGrid(Me,fb)) {}
-				else if (fb is IMyShipGrinder) { Inc("Grinder",fb); }
-				else if (fb is IMyShipWelder) { Inc("Welder",fb); }
-				else if (fb is IMyShipDrill) { Inc("Drill",fb); }
-				else if (fb is IMyOreDetector) { Inc("OreDetector",fb); }
+				else if (fb is IMyShipGrinder) Inc("Grinder",fb);
+				else if (fb is IMyShipWelder) Inc("Welder",fb);
+				else if (fb is IMyShipDrill) Inc("Drill",fb);
+				else if (fb is IMyOreDetector) Inc("OreDetector",fb);
 			}
 			private void Inc(string name, IMyFunctionalBlock blk) {
 				Counters cnt;
-				if (!namedCounters.TryGetValue(name, out cnt)) {
+				if (!namedCounters.TryGetValue(name, out cnt))
 					namedCounters.Add(name, cnt = new Counters());
-				}
-				if (blk.IsWorking) cnt.enabled++; else cnt.disabled++;
+				if (blk.IsWorking)
+					cnt.enabled++;
+				else
+					cnt.disabled++;
 			}
 			public void CollectTeardown() {}
 
 			public string GetText(string name) {
 				Counters cnt;
-				if (!namedCounters.TryGetValue(name, out cnt)) {
+				if (!namedCounters.TryGetValue(name, out cnt))
 					return $"{name}: -- / --";
-				} else if (cnt.disabled == 0) {
+				if (0 == cnt.disabled)
 					return $"{name}: ON {cnt.enabled} / --";
-				} else if (cnt.enabled == 0) {
+				if (0 == cnt.enabled)
 					return $"{name}: -- / {cnt.disabled} OFF";
-				} else {
-					return $"{name}: on {cnt.enabled} / {cnt.disabled} off";
-				}
+				return $"{name}: on {cnt.enabled} / {cnt.disabled} off";
 			}
 		}
 	}
