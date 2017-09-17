@@ -29,7 +29,7 @@ namespace IngameScript {
 			}
 
 			public void AddMenu(MenuManager menuMgr) {
-				if (GetThrustBlocks(ThrustFlags.All, Pgm, Me).Count <= 0)
+				if (1 > GetThrustBlocks(ThrustFlags.All, Pgm, Me).Count)
 					return; // No thrusters found
 
 				Action<ThrustFlags> tsToggle = (tf) => {
@@ -191,9 +191,9 @@ namespace IngameScript {
 					// Number of thrusters which are on/off
 					if (!namedCounters.TryGetValue(pfx, out cnt))
 						return $"{nme}-- / --";
-					if (cnt.disabled == 0)
+					if (0 == cnt.disabled)
 						return $"{nme}ON {cnt.enabled} / --";
-					if (cnt.enabled == 0)
+					if (0 == cnt.enabled)
 						return $"{nme}-- / {cnt.disabled} OFF";
 					return $"{nme}on {cnt.enabled} / {cnt.disabled} off";
 				case 2:

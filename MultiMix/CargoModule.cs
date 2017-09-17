@@ -59,7 +59,7 @@ namespace IngameScript {
 
 				sb.Append(DateTime.Now.ToString("HH\\:mm\\:ss\\.fff"));
 
-				if (isEnabled && ejectors.Count > 0 && inventories.Count > 0) {
+				if (isEnabled && 0 < ejectors.Count && 0 < inventories.Count) {
 					bool hasLock, hasMagnet;
 					CheckConnectors(out hasLock, out hasMagnet);
 					if (hasLock != wasLocked || hasLock) {
@@ -77,14 +77,14 @@ namespace IngameScript {
 					sb.Append("\n StoneEject module ").Append(!isEnabled ? "disabled" : "missing blocks");
 				}
 
-				if (cargoVolume.Count > 0) {
+				if (0 < cargoVolume.Count) {
 					sb.Append("\n-- Cargo fill levels --");
 					foreach (var kv in cargoVolume) {
 						var v=kv.Value;
 						sb.Append($"\n {v.Value/v.Key*100f,3:F0}% {kv.Key}");
 					}
 				}
-				if (itemsAmounts.Count > 0) {
+				if (0 < itemsAmounts.Count) {
 					sb.Append("\n-- Item amounts --");
 					foreach (var kv in itemsAmounts)
 						sb.Append($"\n {FixItemAmout(kv.Key,kv.Value),6:F1} = {kv.Key}");
@@ -247,7 +247,7 @@ namespace IngameScript {
 						},
 						b => {
 							// IMyShipConnector and IMyConveyorSorter have already been filtered out.
-							if (b.InventoryCount != 1 || b is IMyReactor || b is IMyCockpit)
+							if (1 != b.InventoryCount || b is IMyReactor || b is IMyCockpit)
 								return true;
 							inventories.Add(b);
 							return false;

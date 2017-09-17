@@ -70,7 +70,7 @@ namespace IngameScript {
 				});
 
 				nextTickGyros = 0;
-				maxYaw = (gyros.Count > 0 ? gyros[0].GetMaximum<float>("Yaw") : 0);
+				maxYaw = (0 < gyros.Count ? gyros[0].GetMaximum<float>("Yaw") : 0);
 			}
 
 			public new bool Active {
@@ -182,7 +182,7 @@ namespace IngameScript {
 					ang = rot.Length() + forceRotation; // Naive fix for "Gimbal lock"
 					ang = Math.Atan2(ang, Math.Sqrt(Math.Max(0.0, 1.0 - ang * ang))); //More numerically stable than: ang=Math.Asin(ang)
 
-					if (ang < 0.01) {
+					if (0.01 > ang) {
 						SetGyro(g);
 						continue;
 					}

@@ -20,12 +20,12 @@ namespace IngameScript {
 		public static T NextBlockInGrid<T>(Program pgm, IMyTerminalBlock gridRef, T curBlk, int dir) where T : class, IMyTerminalBlock {
 			var lst = new List<T>();
 			pgm.GridTerminalSystem.GetBlocksOfType(lst,b=>(null==gridRef || SameGrid(gridRef,b)));
-			if (lst.Count<=0)
+			if (1 > lst.Count)
 				return null;
-			if (null==curBlk)
+			if (null == curBlk)
 				return lst[0];
 			int i=0;
-			while (lst[i].EntityId != curBlk.EntityId && ++i < lst.Count) {}
+			while (lst[i].EntityId != curBlk.EntityId && lst.Count > ++i) {}
 			return lst[(i+dir) % lst.Count];
 		}
 
@@ -91,6 +91,8 @@ namespace IngameScript {
 				gts.GetBlocksOfType<IMySensorBlock>(blks, fCmp); break;
 			case "detector": case "oredetector":
 				gts.GetBlocksOfType<IMyOreDetector>(blks, fCmp); break;
+			case "gravity": case "gravitygenerator": 
+				gts.GetBlocksOfType<IMyGravityGenerator>(blks, fCmp); break;
 			case "gear": case "landinggear":
 				gts.GetBlocksOfType<IMyLandingGear>(blks, fCmp); break;
 			case "remote": case "remotecontrol":
@@ -117,7 +119,7 @@ namespace IngameScript {
 				gts.GetBlocksOfType<IMyParachute>(blks, fCmp); break;
 			case "farm": case "oxygenfarm":
 				gts.GetBlocksOfType<IMyOxygenFarm>(blks, fCmp); break;
-			case "generator": case "oxygengenerator": case "gasgenerator":
+			case "oxygengenerator": case "gasgenerator":
 				gts.GetBlocksOfType<IMyGasGenerator>(blks, fCmp); break;
 			case "tank": case "gastank":
 				gts.GetBlocksOfType<IMyGasTank>(blks, fCmp); break;
@@ -125,6 +127,8 @@ namespace IngameScript {
 				gts.GetBlocksOfType<IMyGasTank>(blks, x => SubtypeContains(x, "Oxygen") && fCmp(x)); break;
 			case "hydrogentank":
 				gts.GetBlocksOfType<IMyGasTank>(blks, x => SubtypeContains(x, "Hydrogen") && fCmp(x)); break;
+			case "vent": case "airvent":
+				gts.GetBlocksOfType<IMyAirVent>(blks, fCmp); break;
 			case "rotor": case "stator":
 				gts.GetBlocksOfType<IMyMotorStator>(blks, fCmp); break;
 			case "gatlingturret":

@@ -35,27 +35,31 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "3.3.0"; // 2017-09-10
+		const string scriptVersion = "3.6.0"; // 2017-09-17
 
 		Program() { }
 		void Save() { }
 
+		StringBuilder profiler = null;
+
 		void Main(string args) {
+			if (null!=profiler) {
+				profiler.Append($";{Runtime.LastRunTimeMs:F3}\n{DateTime.Now.Ticks};{Runtime.TimeSinceLastRun.Ticks}");
+				if (99900 < profiler.Length) { args="PROFILER"; } // Force-Stop the profiler!
+			}
 			try {
 				Main1(args);
-				//if (Me.CustomData.Length < 64*1024) {
-				//	Me.CustomData = Me.CustomData + $"{Runtime.LastRunTimeMs:F3}\n{Runtime.TimeSinceLastRun.TotalMilliseconds:F3}/{Runtime.CurrentInstructionCount}/";
-				//}
 			} catch (System.Exception e) {
-				Echo($"FAILED! {e.Message}");
+				Echo($"FAILED!\n{e}");
 				lcdCenter.ShowPublicText($"Program Block Runtime Error!\n{e.Message}");
 				// TODO - Future enhancement. If failed because of referencing non-existing block, then try to automatically recover - except if its the timer-block.
 			}
+			profiler?.Append($";{Runtime.CurrentInstructionCount}");
 		}
 
 		void Main2(string args) {
 			var blks = GetBlocksOfType(this, args);
-			if (0 >= blks.Count) {
+			if (1 > blks.Count) {
 				Echo($"No blocks found for; {args}");
 				return;
 			}
@@ -95,7 +99,7 @@ namespace IngameScript {
 				totalTicks += Runtime.TimeSinceLastRun.Ticks;
 
 				bool updateMenu = menuUpdateTick < totalTicks;
-				if (args.Length > 0)
+				if (0 < args.Length)
 					updateMenu |= ProgramCommand(args);
 
 				//
@@ -110,7 +114,7 @@ namespace IngameScript {
 					menuUpdateTick = totalTicks + TimeSpan.TicksPerSecond;
 				}
 			}
-			if (null!=timerBlock) {
+			if (null != timerBlock) {
 				//if (!timerBlock.StillExist()) { return; } // Failure!
 				// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
 				if (fastTrigger)
@@ -145,7 +149,7 @@ namespace IngameScript {
 
 			var sc = GetShipController(MultiMix_UsedBlocks, true);
 
-			if (null!=timerBlock) {
+			if (null != timerBlock) {
 				alignMgr = alignMgr ?? new AlignModule(this);
 				ascDecMgr = ascDecMgr ?? new AscendDecendModule(this);
 				cargoMgr = cargoMgr ?? new CargoModule(this);
@@ -206,6 +210,18 @@ namespace IngameScript {
 				sb.Append("\n======");
 				Echo(sb.ToString());
 				return true;
+			case "PROFILER":
+				if (null == profiler) {
+					profiler = new StringBuilder();
+					profiler.Append($"NowTick;TimeSinceLastRunTicks;CurrentInstructionCount;RunTimeMs\n-1;-1");
+					Echo("Profiler activated.");
+				} else {
+					Me.CustomData = profiler.Append(";-1;-1\n").ToString();
+					profiler.Clear();
+					profiler = null;
+					Echo("Profiler deactivated.\nPB's CustomData filled.");
+				}
+				return false;
 			default:
 				return menuMgr.DoAction(cmd);
 			}
@@ -224,7 +240,7 @@ namespace IngameScript {
 			//
 			MenuItem tt;
 			menuMgr.Add(tt=Menu("Misc. operations"));
-			if (null!=yieldMgr)
+			if (null != yieldMgr)
 				tt.Add(
 					Menu(() => $"Unlock from connector{ConnectorUnlockInfo}")
 						.Enter("connectorUnlock", () => yieldMgr.Add(UnlockFromConnector())),
@@ -297,7 +313,7 @@ namespace IngameScript {
 				rc.DampenersOverride = true;
 			yield return 10;
 
-			float atmosphere = 0;
+			float atmosphere = -1;
 			ActionOnBlocksOfType<IMyParachute>(this, Me, b => {
 				if (b.IsWorking)
 					atmosphere = Math.Max(atmosphere, b.Atmosphere);

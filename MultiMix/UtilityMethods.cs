@@ -39,7 +39,7 @@ namespace IngameScript {
 			if (center) {
 				int mty = (barLen - fil) / 2;
 				sb.Append(SPC, mty).Append(FIL, fil).Append(SPC, mty + (mty * 2 + fil != barLen ? 1 : 0));
-			} else if (Math.Sign(pct) < 0)
+			} else if (0 > Math.Sign(pct))
 				sb.Append(SPC, (barLen - fil)).Append(FIL, fil);
 			else
 				sb.Append(FIL, fil).Append(SPC, (barLen - fil));
@@ -74,7 +74,7 @@ namespace IngameScript {
 			return me.CubeGrid == blk.CubeGrid;
 		}
 		public static bool NameContains(IMyTerminalBlock blk, string search) {
-			return blk.CustomName.IndexOf(search, StringComparison.OrdinalIgnoreCase) > -1;
+			return -1 < blk.CustomName.IndexOf(search, StringComparison.OrdinalIgnoreCase);
 		}
 		public static bool SubtypeContains(IMyTerminalBlock blk, string search) {
 			return blk.BlockDefinition.SubtypeId.Contains(search);

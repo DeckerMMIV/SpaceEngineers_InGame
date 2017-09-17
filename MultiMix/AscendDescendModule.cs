@@ -64,7 +64,7 @@ namespace IngameScript {
 				}
 				if (nextTick < Pgm.totalTicks) {
 					nextTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/2;
-					UpdateTelemetry(true);
+					UpdateTelemetry();
 					ThrustStatus();
 					StatusDisplay();
 					execCount++;
@@ -161,17 +161,20 @@ namespace IngameScript {
 			double altitudeDiff = 0;
 			string raycastName = "";
 			double shipWeight = 0;
+			long shipMassUpdateTick = 0;
 			MyShipMass shipMass = new MyShipMass(0,0,0);
 			float atmosphereDensity = 0;
-			void UpdateTelemetry(bool updateWeight = false) {
+			void UpdateTelemetry() {
 				prevSpeed = currSpeed;
 				currAccl = (currSpeed = sc.GetShipSpeed()) - prevSpeed;
+
 				gravity = (gravityStrength = sc.GetNaturalGravity().Length()) / 9.81;
 
-				if (updateWeight) {
+				if (shipMassUpdateTick < Pgm.totalTicks) {
+					shipMassUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond;
 					shipMass = sc.CalculateShipMass();
-					shipWeight = shipMass.PhysicalMass * gravityStrength;
 				}
+				shipWeight = gravityStrength * shipMass.PhysicalMass; // or -> shipMass.TotalMass
 
 				prevAltitude = altitudeSurface;
 				if (!sc.TryGetPlanetElevation(MyPlanetElevation.Surface, out altitudeSurface)) {
@@ -181,11 +184,13 @@ namespace IngameScript {
 					altitudeDiff = altitudeSurface - prevAltitude;
 				}
 
+				atmosphereDensity = parachute?.Atmosphere ?? float.NaN;
+
 				if (null != downCamera) {
 					if (downCamera.CanScan(1000)) {
 						MyDetectedEntityInfo dei = downCamera.Raycast(1000);
 						double len = 0;
-						if (dei.HitPosition != null) {
+						if (null != dei.HitPosition) {
 							Vector3D hp = (Vector3D)dei.HitPosition;
 							len = (hp - downCamera.CubeGrid.GetPosition()).Length();
 						}
@@ -194,17 +199,15 @@ namespace IngameScript {
 						raycastName = downCamera.AvailableScanRange.ToString();
 					}
 				}
-
-				atmosphereDensity = parachute?.Atmosphere ?? 0;
 			}
 
 			string NumStr(double value, string unit) {
 				double absVal = Math.Abs(value);
-				if (absVal < 1000)
+				if (1000 > absVal)
 					return $"{value:F0} {unit}";
-				if (absVal < 1000000)
+				if (1000000 > absVal)
 					return $"{value/1000:F1} k{unit}";
-				if (absVal < 1000000000)
+				if (1000000000 > absVal)
 					return $"{value/1000000:F2} M{unit}";
 				return $"{value/1000000000:F2} G{unit}";
 			}
@@ -225,7 +228,8 @@ namespace IngameScript {
 
 			long displayUpdateTick = 0;
 			void StatusDisplay() {
-				if (lcd == null || displayUpdateTick > Pgm.totalTicks) return;
+				if (null == lcd || displayUpdateTick > Pgm.totalTicks)
+					return;
 				displayUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/10;
 
 				sb1.Append('\u2022',7).Append($" Status Display ").Append('\u2022',7).Append(DateTime.Now.ToString(" HH\\:mm\\:ss\\.fff"));
@@ -235,7 +239,7 @@ namespace IngameScript {
 				string altiDiff = ((double.IsNaN(altitudeDiff) || Math.Abs(altitudeDiff) < 1) ? "" : ((altitudeDiff > 0) ? " /\u201c\\" : " \\\u201e/"));
 				sb1.Append($"\n Altitude: {alti} m{altiDiff} \u2022 Gravity: {gravity:F3} g");
 				sb1.Append($"\n Spd: {currSpeed:F2} m/s \u2022 Acc.: {currAccl:F2} \u2022 Atm.: {atmosphereDensity:F1}");
-				if (mode == Mode.Descend) {
+				if (Mode.Descend == mode) {
 					sb1.Append($"\n BrakeDistance: {brakeDistance:F2} \u2022 AlignDiff: {align.AlignDifference:F3}");
 					sb1.Append($"\n Raycast: {raycastName}");
 				}
@@ -245,7 +249,7 @@ namespace IngameScript {
 
 				sb1.Append(sb2);
 
-				if (hydrogenTanks.Count > 0) {
+				if (0 < hydrogenTanks.Count) {
 					if (hydroTanksUpdateTick < Pgm.totalTicks) {
 						hydroTanksUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/3;
 						hydroTanksPctFilled = 0;
@@ -262,7 +266,7 @@ namespace IngameScript {
 					AppendPctBar(sb1, $"\n Hydr:", -hydroTanksPctFilled, 30, false).Append($" {hydroTanksPctFilled * 100:F1}% in {hydroTanksGiving} tanks");
 				}
 
-				if (batteries.Count > 0) {
+				if (0 < batteries.Count) {
 					if (batteriesUpdateTick < Pgm.totalTicks) {
 						batteriesUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond;
 						battStoredPower = 0;
@@ -315,97 +319,92 @@ namespace IngameScript {
 					}
 					stateMachine = null;
 					ThrustZero();
-					align.Active=false;
+					align.Active = false;
 					curState = "Offline";
 				}
 			}
 
 			bool abortStateMachine;
 			IEnumerable<int> AscendStateMachine() {
-				sb2.Clear();
-
-				// Ignite
-				curState = "Ignition";
-				thrustPct = 0.7f;
-				State_DampenersOff();
-				yield return 100;
-				if (abortStateMachine) yield break;
-
 				// Loop and increase thrust until (upwards) movement detected
-				int localDelayMS = 200;
 				curState = "Pending Liftoff";
-				while (State_Liftoff(localDelayMS)) {
-					yield return localDelayMS;
+				thrustPct = 0.5f;
+				while (State_Liftoff()) {
+					yield return 200;
 					if (abortStateMachine) yield break;
 				}
 
 				// Activate gravity-alignment
 				curState = "GravityAlignEnable";
-				align.Inverted=false;
-				align.Active=true;
+				align.Inverted = false;
+				align.Active = true;
+				sc.DampenersOverride = false;
 
 				// Loop until zero-gravity detected
 				curState = "Maintain Lift";
 				do {
-					localDelayMS = (MaxSpeed - currSpeed < 10) ? 1000 : 200;
-					yield return localDelayMS;
+					yield return (10 > MaxSpeed - currSpeed) ? 1000 : 200;
 					if (abortStateMachine) yield break;
-				} while (State_MaintainLift(localDelayMS));
+				} while (State_MaintainLift());
 
 				// Brake!
 				curState = "VelocityAlignEnable";
-				align.Inverted=false;
-				align.Active=true; // Force update
+				align.Inverted = false;
+				align.Active = true; // Force update
+				ThrustZero();
+				ThrustStatus();
 				yield return 100;
 				if (abortStateMachine) yield break;
 
 				// Wait for no movement
 				curState = "Braking";
+				sc.DampenersOverride = true;
 				while (State_HasMovement()) {
 					yield return 500;
 					if (abortStateMachine) yield break;
 				}
 
 				curState = "Completed";
-				align.Active=false;
+				align.Active = false;
+				ThrustStatus();
 			}
 
-			bool State_Liftoff(int timeMS) {
-				UpdateTelemetry(true);
-				AdjustThrustPower(1, timeMS);
-				return currSpeed < 1;
-			}
-
-			bool State_MaintainLift(int timeMS) {
-				UpdateTelemetry(true);
-				if (gravityStrength <= 0) { return false; }
-				AdjustThrustPower(1, timeMS);
-				return true;
-			}
-
-			void State_DampenersOff() {
+			bool State_Liftoff() {
 				UpdateTelemetry();
-				sc.DampenersOverride = false;
+				AdjustThrustPower(0.01f);
+				return 1 > currSpeed;
+			}
+
+			bool State_MaintainLift() {
+				UpdateTelemetry();
+				if (0 >= gravityStrength)
+					return false;
+				AdjustThrustPower(0.01f);
+				return true;
 			}
 
 			bool State_HasMovement() {
 				UpdateTelemetry();
-				sc.DampenersOverride = true;
-				ThrustZero();
 				ThrustStatus();
-				return currSpeed > 0;
+				return 0 < currSpeed;
 			}
 
 			int parachuteHeight = 1000;
 			public int ParachuteHeight {
 				get { return parachuteHeight; }
-				set { parachuteHeight=Math.Max(100,value); SetProperty(GetBlocksOfType(Pgm,"Parachute",Me),"AutoDeployHeight",parachuteHeight); }
+				set {
+					parachuteHeight = Math.Max(100,value);
+					SetProperty(GetBlocksOfType(Pgm,"Parachute",Me),"AutoDeployHeight",parachuteHeight);
+				}
 			}
 
 			bool useParachute = true;
 			public bool UseParachute {
 				get { return useParachute; }
-				set { useParachute=value; SetProperty(GetBlocksOfType(Pgm,"Parachute",Me),"AutoDeploy",useParachute); }
+				set {
+					useParachute = value;
+					SetProperty(GetBlocksOfType(Pgm,"Parachute",Me),"AutoDeploy",useParachute);
+				}
 			}
 
 			double brakeDistanceFactor = 1.1;
@@ -420,14 +419,15 @@ namespace IngameScript {
 				// Initialize
 				curState = "Initialize";
 				thrustPct = 1.0f;
-				State_DampenersOff();
+				//State_DampenersOff();
+				sc.DampenersOverride = false;
 				yield return 100;
 				if (abortStateMachine) yield break;
 
 				// Disable gravity-alignment
 				curState = "GravityAlignDisable";
-				align.Inverted=false;
-				align.Active=false;
+				align.Inverted = false;
+				align.Active = false;
 				yield return 100;
 				if (abortStateMachine) yield break;
 
@@ -442,8 +442,8 @@ namespace IngameScript {
 
 				// Enable gravity-alignment
 				curState = "GravityAlignEnable";
-				align.Inverted=false;
-				align.Active=true;
+				align.Inverted = false;
+				align.Active = true;
 				yield return 100;
 				if (abortStateMachine) yield break;
 
@@ -460,6 +460,7 @@ namespace IngameScript {
 				//
 				curState = "Braking";
 				ThrustZero();
+				sc.DampenersOverride = true;
 				while (State_StillMoving()) {
 					yield return 300;
 					if (abortStateMachine) yield break;
@@ -467,7 +468,7 @@ namespace IngameScript {
 
 				//
 				curState = "Completed";
-				align.Active=false;
+				align.Active = false;
 			}
 
 			double brakeDistance;
@@ -476,13 +477,16 @@ namespace IngameScript {
 				double maxThrust = GetTotalEffectiveThrust();
 
 				double brakeForce = maxThrust - shipWeight;
-				double deceleration = brakeForce / shipMass.PhysicalMass;
+				double deceleration = brakeForce / shipMass.PhysicalMass; // or -> shipMass.TotalMass
+				//brakeDistance = (currSpeed * currSpeed) / (2 * deceleration);
 
-				brakeDistance = (currSpeed * currSpeed) / (2 * deceleration);
+				//double time = currSpeed / deceleration;
+				//brakeDistance = time * currSpeed / 2;
+				brakeDistance = (currSpeed / 2) * (currSpeed / deceleration);
 			}
 
 			bool State_AboveBrakeDistance(double altitudeFactor) {
-				UpdateTelemetry(true);
+				UpdateTelemetry();
 				UpdateBrakeDistance();
 				if (!double.IsNaN(altitudeSurface))
 					if (brakeDistance * altitudeFactor > altitudeSurface)
@@ -491,9 +495,8 @@ namespace IngameScript {
 			}
 
 			bool State_StillMoving() {
-				UpdateTelemetry(true);
+				UpdateTelemetry();
 				UpdateBrakeDistance();
-				sc.DampenersOverride = true;
 				ThrustStatus();
 				return currSpeed > 0;
 			}
@@ -510,15 +513,18 @@ namespace IngameScript {
 					float minEff = GetRequiredMinimumEffectiveThrust(thrPrio.Current.Key);
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();) {
 						var thrsts = thrType.Current.Value;
-						if (0 < thrsts.Count) {
-							var thrst = thrsts[0];
-							float eff = thrst.MaxEffectiveThrust / thrst.MaxThrust;
-							if (eff >= minEff) {
-								int cnt = 0;
-								foreach(var t in thrsts)
-									cnt += t.IsWorking ? 1 : 0;
-								totalEffThrust += thrst.MaxEffectiveThrust * cnt;
-							}
+						if (1 > thrsts.Count)
+							continue;
+
+						var thrst = thrsts[0];
+						float eff = thrst.MaxEffectiveThrust / thrst.MaxThrust;
+						if (eff >= minEff) {
+							int cnt = 0;
+							foreach(var t in thrsts)
+								if (t.IsWorking)
+									cnt++;
+
+							totalEffThrust += thrst.MaxEffectiveThrust * cnt;
 						}
 					}
 				}
@@ -531,27 +537,27 @@ namespace IngameScript {
 			float localThrustCur, localThrustMax;
 			const int barLen = 20;
 
-			void AdjustThrustPower(float offset, int timeMS = 1000) {
-				thrustPct = Math.Min(Math.Max(0, thrustPct + (offset / 100f)), 1.00f);
+			void AdjustThrustPower(float offset) {
+				thrustPct = MathHelper.Clamp(thrustPct + offset, 0, 1f);
 				// Requirement: UpdateTelemetry() 
 				double neededAcceleration = (MaxSpeed - currSpeed) * thrustPct;
 				remainThrustNeeded = totalThrustWanted = Math.Max(0, (float)((shipMass.PhysicalMass * neededAcceleration) + shipWeight));
-				AdjustThrustPower();
+				ThrustPowerAndStatus();
 			}
 
 			void ReduceToMaxSpeed() {
 				// Requirement: UpdateTelemetry() 
 				double neededAcceleration = Math.Max(0, (currSpeed - MaxSpeed));
-				if (neededAcceleration > 0) {
+				if (0 < neededAcceleration) {
 					remainThrustNeeded = totalThrustWanted = (float)((shipMass.PhysicalMass * neededAcceleration) + shipWeight);
-					AdjustThrustPower();
+					ThrustPowerAndStatus();
 				} else {
 					ThrustZero();
 					ThrustStatus();
 				}
 			}
 
-			void AdjustThrustPower() {
+			void ThrustPowerAndStatus() {
 				sb2.Clear();
 
 				sumThrustCurEff = 0;
@@ -564,17 +570,22 @@ namespace IngameScript {
 
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();) {
 						var thrsts = thrType.Current.Value;
-						if (thrsts.Count <= 0)
+						if (1 > thrsts.Count)
 							continue;
 
 						var thrst = thrsts[0];
 						float pct = 0;
 						float eff = thrst.MaxEffectiveThrust / thrst.MaxThrust;
 						if (eff >= minEff) {
-							localThrustMax = thrst.MaxEffectiveThrust * thrsts.Count;
-							pct = (localThrustMax > 0 ? Math.Min(1f, remainThrustNeeded / localThrustMax) : 0);
+							int cnt = 0;
+							foreach(var t in thrsts)
+								if (t.IsWorking)
+									cnt++;
 
-							if (currSpeed > 0)
+							localThrustMax = thrst.MaxEffectiveThrust * cnt;
+							pct = (0 < localThrustMax ? Math.Min(1f, remainThrustNeeded / localThrustMax) : 0);
+
+							if (0 < currSpeed)
 								remainThrustNeeded = Math.Max(0, remainThrustNeeded - (localThrustMax * pct));
 						}
 
@@ -596,7 +607,7 @@ namespace IngameScript {
 				for (var thrPrio = thrusts.GetEnumerator(); thrPrio.MoveNext();)
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();)
 						foreach(var t in thrType.Current.Value)
-							if (t.ThrustOverride > 0)
+							if (0 < t.ThrustOverride)
 								t.SetValueFloat("Override", 0);
 			}
 
@@ -611,7 +622,7 @@ namespace IngameScript {
 
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();) {
 						var thrsts = thrType.Current.Value;
-						if (thrsts.Count <= 0)
+						if (1 > thrsts.Count)
 							continue;
 
 						var thrst = thrsts[0];
@@ -620,11 +631,11 @@ namespace IngameScript {
 							localThrustCur += t.CurrentThrust;
 						sumThrustCurEff += localThrustCur;
 
-						localThrustMax = thrst.MaxThrust * thrsts.Count;
-						float pct = (localThrustMax > 0 ? Math.Min(1f, localThrustCur / localThrustMax) : 0);
+						localThrustMax = thrst.MaxEffectiveThrust * thrsts.Count;
+						float pct = (0 < localThrustMax ? Math.Min(1f, localThrustCur / localThrustMax) : 0);
 						AppendPctBar(sb2, "\n Thr:", pct, barLen, false);
 
-						if (thrst.MaxThrust <= 0)
+						if (0 >= thrst.MaxThrust)
 							sb2.Append(" Eff:[---Unknown---]");
 						else
 							AppendPctBar(sb2, " Eff:", thrst.MaxEffectiveThrust / thrst.MaxThrust, barLen, false, true);

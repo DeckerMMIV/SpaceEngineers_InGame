@@ -147,6 +147,29 @@ namespace IngameScript {
 					tls.Add(tp);
 				}
 
+				if (HasGravityGenerators()) {
+					foundTools = true;
+					MenuItem tp = Menu("Gravity generators").Add(
+						Menu(()=>GravityGeneratorText("Selected",0))
+							.Left(()=>GravityGeneratorProp(0,-1))
+							.Right(()=>GravityGeneratorProp(0,1))
+							.Enter(()=>ToggleGravityGen())
+					);
+
+					int i=0;
+					foreach(string txt in new[] {"Width","Height","Depth","Strength"}) {
+						int j=++i;
+						tp.Add(
+							Menu(()=>GravityGeneratorText(txt,j))
+								.Left(()=>GravityGeneratorProp(j,-1))
+								.Right(()=>GravityGeneratorProp(j,1))
+								.Back(()=>GravityGeneratorProp(j,0))
+						);
+					}
+
+					tls.Add(tp);
+				}
+
 				if (foundTools)
 					menuMgr.Add(tls);
 			}
@@ -174,9 +197,44 @@ namespace IngameScript {
 				return namedCounters.ContainsKey(toolName);
 			}
 
+			class Counters { public int enabled; public int disabled; }
+			Dictionary<string, Counters> namedCounters = new Dictionary<string, Counters>();
+			public void CollectSetup() {
+				namedCounters.Clear();
+			}
+			public void CollectBlock(IMyTerminalBlock blk) {
+				var fb = blk as IMyFunctionalBlock;
+				if (null==fb || !SameGrid(Me,fb)) {}
+				else if (fb is IMyShipGrinder) Inc("Grinder",fb);
+				else if (fb is IMyShipWelder) Inc("Welder",fb);
+				else if (fb is IMyShipDrill) Inc("Drill",fb);
+				else if (fb is IMyOreDetector) Inc("OreDetector",fb);
+			}
+			private void Inc(string name, IMyFunctionalBlock blk) {
+				Counters cnt;
+				if (!namedCounters.TryGetValue(name, out cnt))
+					namedCounters.Add(name, cnt = new Counters());
+				if (blk.IsWorking)
+					cnt.enabled++;
+				else
+					cnt.disabled++;
+			}
+			public void CollectTeardown() {}
+
+			public string GetText(string name) {
+				Counters cnt;
+				if (!namedCounters.TryGetValue(name, out cnt))
+					return $"{name}: -- / --";
+				if (0 == cnt.disabled)
+					return $"{name}: ON {cnt.enabled} / --";
+				if (0 == cnt.enabled)
+					return $"{name}: -- / {cnt.disabled} OFF";
+				return $"{name}: on {cnt.enabled} / {cnt.disabled} off";
+			}
+
 			public void ToolDistance(string toolName, int dir) {
 				var blks = GetBlocksOfType(Pgm,toolName,Me);
-				if (0 >= blks.Count)
+				if (1 > blks.Count)
 					return;
 
 				try {
@@ -191,6 +249,7 @@ namespace IngameScript {
 				}
 			}
 
+			#region Sensor
 			private IMySensorBlock sensor = null;
 			public bool HasSensors() {
 				return null!=NextBlockInGrid(Pgm,Me,sensor,0);
@@ -210,7 +269,7 @@ namespace IngameScript {
 				if (null==sensor)
 					return;
 
-				Func<float,int,float> ext = (v,d) => { return d==0 ? 1 : MathHelper.Clamp(v+d,1,50); };
+				Func<float,int,float> ext = (v,d) => { return 0==d ? 1 : MathHelper.Clamp(v+d,1,50); };
 
 				switch (propId) {
 				case 1: sensor.FrontExtend	=ext(sensor.FrontExtend,propVal);	break;
@@ -265,7 +324,9 @@ namespace IngameScript {
 				string nme=$"{lbl}{mfx}:".PadRight(p);
 				return $"{nme}{sfx}";
 			}
+			#endregion
 
+			#region Projector
 			private IMyProjector projector = null;
 			public bool HasProjectors() {
 				return null!=NextBlockInGrid(Pgm,Me,projector,0);
@@ -287,9 +348,9 @@ namespace IngameScript {
 
 				Func<Vector3I,int,int,Func<int,int,int>,Vector3I> updVec = (vec,idx,dir,mod) => {
 					switch (idx) {
-					case 1: vec.X = dir!=0 ? mod(vec.X, dir) : 0; break;
-					case 2: vec.Y = dir!=0 ? mod(vec.Y, dir) : 0; break;
-					case 3: vec.Z = dir!=0 ? mod(vec.Z, dir) : 0; break;
+					case 1: vec.X = 0!=dir ? mod(vec.X, dir) : 0; break;
+					case 2: vec.Y = 0!=dir ? mod(vec.Y, dir) : 0; break;
+					case 3: vec.Z = 0!=dir ? mod(vec.Z, dir) : 0; break;
 					}
 					return vec;
 				};
@@ -333,41 +394,97 @@ namespace IngameScript {
 				}
 				return $"{pfx}{mfx}: {sfx}";
 			}
+			#endregion
 
-			class Counters { public int enabled; public int disabled; }
-			Dictionary<string, Counters> namedCounters = new Dictionary<string, Counters>();
-			public void CollectSetup() {
-				namedCounters.Clear();
+			#region Gravity
+			private IMyGravityGeneratorBase gravityGen = null;
+			private int factor = 1;
+			public bool HasGravityGenerators() {
+				return null != NextBlockInGrid(Pgm,Me,gravityGen,0);
 			}
-			public void CollectBlock(IMyTerminalBlock blk) {
-				var fb = blk as IMyFunctionalBlock;
-				if (null==fb || !SameGrid(Me,fb)) {}
-				else if (fb is IMyShipGrinder) Inc("Grinder",fb);
-				else if (fb is IMyShipWelder) Inc("Welder",fb);
-				else if (fb is IMyShipDrill) Inc("Drill",fb);
-				else if (fb is IMyOreDetector) Inc("OreDetector",fb);
-			}
-			private void Inc(string name, IMyFunctionalBlock blk) {
-				Counters cnt;
-				if (!namedCounters.TryGetValue(name, out cnt))
-					namedCounters.Add(name, cnt = new Counters());
-				if (blk.IsWorking)
-					cnt.enabled++;
-				else
-					cnt.disabled++;
-			}
-			public void CollectTeardown() {}
 
-			public string GetText(string name) {
-				Counters cnt;
-				if (!namedCounters.TryGetValue(name, out cnt))
-					return $"{name}: -- / --";
-				if (0 == cnt.disabled)
-					return $"{name}: ON {cnt.enabled} / --";
-				if (0 == cnt.enabled)
-					return $"{name}: -- / {cnt.disabled} OFF";
-				return $"{name}: on {cnt.enabled} / {cnt.disabled} off";
+			public bool ToggleGravityGen() { 
+				return null == gravityGen ? false : (gravityGen.Enabled = !gravityGen.Enabled);
 			}
+
+			public void GravityGeneratorProp(int propId, int propVal) {
+				if (0==propId) {
+					gravityGen = NextBlockInGrid(Pgm,Me,gravityGen,propVal);
+					return;
+				}
+				if (null==gravityGen)
+					return;
+
+				Func<Vector3,int,int,Vector3> updVec = (vec,idx,dir) => {
+					switch (idx) {
+					case 1: vec.X += dir; break;
+					case 2: vec.Y += dir; break;
+					case 3: vec.Z += dir; break;
+					}
+					return vec;
+				};
+
+				switch (propId) {
+				case 1: case 2: case 3:
+					if (0==propVal) {
+						factor *= 10;
+						if (100 < factor) {
+							factor = 1;
+						}
+						break;
+					}
+					var gravGenBox = gravityGen as IMyGravityGenerator;
+					if (null != gravGenBox) {
+					 gravGenBox.FieldSize = updVec(gravGenBox.FieldSize, propId, propVal * factor);
+					} else {
+						var gravGenSphere = gravityGen as IMyGravityGeneratorSphere;
+						if (null != gravGenSphere) {
+							gravGenSphere.Radius += propVal;
+						}
+					}
+					break;
+				case 4:
+					gravityGen.GravityAcceleration += propVal;
+					break;
+				}
+			}
+
+			public string GravityGeneratorText(string pfx, int propId) {
+				string mfx="", sfx=(0==propId) ? "(no grav.generators)" : "???";
+				if (null!=gravityGen) {
+					Func<Vector3,int,float> getV = (vec,idx) => {
+						switch(idx) {
+						case 1: return vec.X;
+						case 2: return vec.Y;
+						case 3: return vec.Z;
+						}
+						return 0;
+					};
+
+					switch(propId) {
+					case 0:
+						mfx = gravityGen.Enabled?" [ON]":" [off]";
+						sfx = gravityGen.CustomName;
+						break;
+					case 1: case 2: case 3:
+						var gravGenBox = gravityGen as IMyGravityGenerator;
+						if (null != gravGenBox) {
+							sfx = $"{getV(gravGenBox.FieldSize,propId):F0}   (+/-{factor})";
+						} else {
+							var gravGenSphere = gravityGen as IMyGravityGeneratorSphere;
+							if (null != gravGenSphere) {
+								sfx = $"{gravGenSphere.Radius:F0}   (+/-{factor})";
+							}
+						}
+						break;
+					case 4:
+						sfx = $"{gravityGen.GravityAcceleration/9.81:F2}";
+						break;
+					}
+				}
+				return $"{pfx}{mfx}: {sfx}";
+			}
+			#endregion
 		}
 	}
 }

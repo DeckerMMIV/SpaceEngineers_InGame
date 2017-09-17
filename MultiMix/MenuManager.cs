@@ -60,7 +60,7 @@ namespace IngameScript {
 
 			public void DrawMenu(OutputPanel lcds, int maxLines = 15) {
 				UpdateMenu(maxLines);
-				if (WarningText.Length>0)
+				if (0 < WarningText.Length)
 					sb.Append(WarningText);
 				lcds.WritePublicText(sb);
 			}
@@ -112,7 +112,7 @@ namespace IngameScript {
 					if (null != collector && !collectors.Contains(collector))
 						collectors.Add(collector);
 				}
-				if (collectors.Count > 0) {
+				if (0 < collectors.Count) {
 					foreach(var c in collectors)
 						c.CollectSetup();
 					pgm.GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(null, b => {
@@ -183,7 +183,8 @@ namespace IngameScript {
 				var lst = new List<string>();
 				Action<List<MenuItem>> recurse = null;
 				recurse = (e) => {
-					if (null == e) return;
+					if (null == e)
+						return;
 					foreach (var f in e) {
 						if (0 < f.DirectCmd.Length)
 							lst.Add(f.DirectCmd);
