@@ -31,10 +31,12 @@ namespace IngameScript {
 					if (p.Key < Pgm.totalTicks) {
 						pending.RemoveAt(0);
 						Execute(p.Value);
-					}
-					if (0 < pending.Count)
-						if (pending.First().Key < Pgm.totalTicks + TimeSpan.TicksPerSecond)
-							return true; // FastTrigger needed
+						//
+						if (0 < pending.Count)
+							if (pending.First().Key < Pgm.totalTicks + TimeSpan.TicksPerSecond)
+								return true; // FastTrigger needed
+					} else if (p.Key < Pgm.totalTicks + TimeSpan.TicksPerSecond)
+						return true; // FastTrigger needed
 				}
 				return false;
 			}

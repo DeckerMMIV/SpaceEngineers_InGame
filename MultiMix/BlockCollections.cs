@@ -65,7 +65,7 @@ namespace IngameScript {
 		}
 
 		public static List<IMyTerminalBlock> GetBlocksOfType(List<IMyTerminalBlock> blks, Program pgm, string blockType, IMyTerminalBlock gridRef=null, string customName = null, bool negName = false) {
-			Func<IMyTerminalBlock, bool> fCmp = (b) => ((null==gridRef || SameGrid(b, gridRef)) && (null==customName || (NameContains(b, customName) ? !negName : negName)));
+			Func<IMyTerminalBlock, bool> fCmp = b => ((null==gridRef || SameGrid(b, gridRef)) && (null==customName || NameContains(b, customName) ? !negName : negName));
 			var gts = pgm.GridTerminalSystem;
 
 			switch (blockType.ToLower()) {
@@ -131,6 +131,8 @@ namespace IngameScript {
 				gts.GetBlocksOfType<IMyAirVent>(blks, fCmp); break;
 			case "rotor": case "stator":
 				gts.GetBlocksOfType<IMyMotorStator>(blks, fCmp); break;
+			case "weapons":
+				gts.GetBlocksOfType<IMyUserControllableGun>(blks, fCmp); break;
 			case "gatlingturret":
 				gts.GetBlocksOfType<IMyLargeGatlingTurret>(blks, fCmp); break;
 			case "gatlinggun":
@@ -148,7 +150,7 @@ namespace IngameScript {
 			case "advanceddoor":
 				gts.GetBlocksOfType<IMyAdvancedDoor>(blks, fCmp); break;
 			case "door":
-				gts.GetBlocksOfType<IMyDoor>(blks, x=> !(x is IMyAirtightHangarDoor || x is IMyAirtightSlideDoor || x is IMyAdvancedDoor) && fCmp(x)); break;
+				gts.GetBlocksOfType<IMyDoor>(blks, x => !(x is IMyAirtightHangarDoor || x is IMyAirtightSlideDoor || x is IMyAdvancedDoor) && fCmp(x)); break;
 			case "cryo": case "cryochamber":
 				gts.GetBlocksOfType<IMyCryoChamber>(blks, fCmp); break;
 			case "refinery":

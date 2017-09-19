@@ -39,8 +39,16 @@ namespace IngameScript {
 			}
 
 			new public bool Active {
-				get { return null != ascMgr ? !ascMgr.IsRunning : true; }
+				get { return isActive; }
+				set {
+					if (value)
+						if (!isActive)
+							Pgm.yieldMgr?.Add(Update());
+					else
+						isActive = false;
+				}
 			}
+			bool isActive = false;
 
 			public bool Enabled {
 				get { return isEnabled; }
@@ -48,15 +56,22 @@ namespace IngameScript {
 			}
 			bool isEnabled = true;
 
-			long nextTick = 0;
 			StringBuilder sb = new StringBuilder();
 			bool wasLocked;
 
-			override public bool Tick() {
-				if (nextTick > Pgm.totalTicks)
-					return false;
-				nextTick = Pgm.totalTicks + TimeSpan.TicksPerSecond;
+			override public bool Tick() { return false; }
 
+			int instanceNum = 0;
+			IEnumerable<int> Update() {
+				int thisInstance = ++instanceNum;
+				isActive = true;
+				while (isActive && thisInstance == instanceNum) {
+					MoveCargo();
+					yield return 1000;
+				}
+			}
+
+			void MoveCargo() {
 				sb.Append(DateTime.Now.ToString("HH\\:mm\\:ss\\.fff"));
 
 				if (isEnabled && 0 < ejectors.Count && 0 < inventories.Count) {
@@ -90,8 +105,7 @@ namespace IngameScript {
 						sb.Append($"\n {FixItemAmout(kv.Key,kv.Value),6:F1} = {kv.Key}");
 				}
 
-				lcd.WritePublicText(sb);
-				return false;
+				lcd?.WritePublicText(sb);
 			}
 
 			void CheckConnectors(out bool hasLocked, out bool hasMagnet) {
@@ -208,11 +222,8 @@ namespace IngameScript {
 			List<Func<IMyTerminalBlock, bool>> pipeline = null;
 			List<MyInventoryItemFilter> filterOreStone = null;
 
-			AscendDecendModule ascMgr;
-			public void Refresh(OutputPanel _lcd, AscendDecendModule _mgr = null) {
+			public void Refresh(OutputPanel _lcd) {
 				lcd = _lcd;
-				ascMgr = _mgr;
-				nextTick = 0;
 
 				if (null == pipeline) {
 					filterOreStone = new List<MyInventoryItemFilter> { oreStone };

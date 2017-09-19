@@ -24,10 +24,10 @@ namespace IngameScript {
 			public void AddMenu(MenuManager menuMgr) {
 				menuMgr.Add(
 					Menu("Ascend/Descend controller").Add(
-						Menu(() => LabelOnOff(OperationMode == Mode.Ascend, $"Mode {(IsRunning ? "[ACTIVE]" : "[Idle]")}: ", "Ascend-Lift", "Descend-Fall"))
+						Menu(() => LabelOnOff(OperationMode == Mode.Descend, $"Mode {(IsRunning ? "[ACTIVE]" : "[Idle]")}: ", "Descend-Fall", "Ascend-Lift"))
 							.Enter(() => ToggleRunState())
-							.Left(() => OperationMode = Mode.Ascend)
-							.Right(() => OperationMode = Mode.Descend),
+							.Left(() => OperationMode = Mode.Descend)
+							.Right(() => OperationMode = Mode.Ascend),
 						Menu(() => $"{OperationMode} max speed: {MaxSpeed} m/s")
 							.Left(() => MaxSpeed -= 10)
 							.Right(() => MaxSpeed += 10)
@@ -215,7 +215,7 @@ namespace IngameScript {
 			StringBuilder sb1 = new StringBuilder();
 			StringBuilder sb2 = new StringBuilder();
 			string curState = "";
-			readonly string[] chargeAnim={"     ","  <<"," << ","<<  "};
+			readonly string[] chargeAnim={"      ","  <<"," << ","<<  "};
 
 			long hydroTanksUpdateTick = 0;
 			float hydroTanksPctFilled = 0;

@@ -40,18 +40,7 @@ namespace IngameScript {
 				);
 			}
 
-			bool alignFastTrigger = false;
-			long nextTickGyros;
-
-			override public bool Tick() {
-				bool fastTrigger = isActive & alignFastTrigger;
-
-				if (isActive && nextTickGyros < Pgm.totalTicks) {
-					fastTrigger |= (alignFastTrigger = AdjustGyros());
-					nextTickGyros = Pgm.totalTicks + TimeSpan.FromMilliseconds(alignFastTrigger ? 100 : 1000).Ticks;
-				}
-				return fastTrigger;
-			}
+			override public bool Tick() { return false; }
 
 			AscendDecendModule asc = null;
 			IMyShipController sc = null;
@@ -69,56 +58,51 @@ namespace IngameScript {
 					(b) => { if (ToType(b, ref g) && g.IsWorking) { gyros.Add(g); return false; } return true; },
 				});
 
-				nextTickGyros = 0;
 				maxYaw = (0 < gyros.Count ? gyros[0].GetMaximum<float>("Yaw") : 0);
 			}
 
 			public new bool Active {
 				get { return isActive; }
-				set { SetActive(value); }
-			}
-			bool isActive = false;
-			void SetActive(bool enable) {
-				if ((isActive = enable) && null != sc) {
-					nextTickGyros = 0;
-				} else {
-					isActive = false;
-					alignDifference = 0;
-					gyros.ForEach(g => SetGyro(g));
+				set {
+					if (value && null != sc) {
+						if (!isActive)
+							Pgm.yieldMgr?.Add(Update());
+					} else {
+						isActive = false;
+						alignDifference = 0;
+						foreach(var g in gyros)
+							SetGyro(g);
+					}
 				}
 			}
+			bool isActive = false;
 
 			public bool IgnoreGravity { 
 				get { return ignoreGravity; }
-				set { ignoreGravity=value; }
+				set { ignoreGravity = value; }
 			}
 			bool ignoreGravity = false;
 
 			public bool Inverted { 
 				get { return isInverted; } 
-				set { SetInverted(value); }
+				set { isInverted = (!ignoreGravity && sc.GetNaturalGravity().Length() > 0) ? false : value; }
 			}
 			bool isInverted = false;
-			void SetInverted(bool invert) {
-				isInverted = (!ignoreGravity && sc.GetNaturalGravity().Length() > 0) ? false : invert;
-			}
 
 			public bool RocketMode { 
 				get { return isRocket; } 
-				set { SetRocket(value); }
-			}
-			bool isRocket = false;
-			void SetRocket(bool enable) {
-				isRocket = enable;
-				nextTickGyros = 0;
-				if (null != asc) {
-					asc.ThrustZero();
-					asc.RefreshThrustsList(isRocket);
+				set { 
+					isRocket = value;
+					asc?.ThrustZero();
+					asc?.RefreshThrustsList(isRocket);
+					Active = Active; // Force update
 				}
 			}
+			bool isRocket = false;
 
 			public bool IsAligned { get { return alignDifference < 0.01; } }
 			public double AlignDifference { get { return alignDifference; } }
+			double alignDifference = 0;
 
 			bool needFastTrigger;
 			Matrix or;
@@ -126,16 +110,25 @@ namespace IngameScript {
 			double ctrl_vel;
 			double ang;
 			double forceRotation;
-			double alignDifference = 0;
 			Vector3D down;
 			Vector3D alignVec;
 			Vector3D localDown;
 			Vector3D localGrav;
 			Vector3D rot;
-			double ctrl_Coeff = 0.8; //Set lower if overshooting, set higher to respond quicker
+
 			public double GyroCoeff {
 				get { return ctrl_Coeff; }
 				set { ctrl_Coeff = Math.Max(0.0, Math.Min(1.0, value)); }
+			}
+			double ctrl_Coeff = 0.8; //Set lower if overshooting, set higher to respond quicker
+
+			int instanceNum = 0;
+			IEnumerable<int> Update() {
+				int thisInstance = ++instanceNum;
+				isActive = true;
+				while (isActive && thisInstance == instanceNum) {
+					yield return AdjustGyros() ? 10 : 1000;
+				}
 			}
 
 			bool AdjustGyros() {
@@ -152,7 +145,6 @@ namespace IngameScript {
 						// No usable velocity, reset all gyros
 						foreach(var g in gyros)
 							SetGyro(g);
-
 						return false;
 					}
 				}

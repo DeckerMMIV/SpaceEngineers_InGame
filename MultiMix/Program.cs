@@ -35,7 +35,7 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "3.6.0"; // 2017-09-17
+		const string scriptVersion = "3.7.3"; // 2017-09-19
 
 		Program() { }
 		void Save() { }
@@ -50,7 +50,7 @@ namespace IngameScript {
 			try {
 				Main1(args);
 			} catch (System.Exception e) {
-				Echo($"FAILED!\n{e}");
+				Echo($"FAILED!\n{e.Message}");
 				lcdCenter.ShowPublicText($"Program Block Runtime Error!\n{e.Message}");
 				// TODO - Future enhancement. If failed because of referencing non-existing block, then try to automatically recover - except if its the timer-block.
 			}
@@ -103,15 +103,13 @@ namespace IngameScript {
 					updateMenu |= ProgramCommand(args);
 
 				//
-				fastTrigger |= Tick(alignMgr);
 				fastTrigger |= Tick(ascDecMgr);
-				fastTrigger |= Tick(cargoMgr);
 				fastTrigger |= Tick(yieldMgr);
 
 				//
 				if (updateMenu) {
-					menuMgr.DrawMenu(lcdCenter);
 					menuUpdateTick = totalTicks + TimeSpan.TicksPerSecond;
+					menuMgr.DrawMenu(lcdCenter);
 				}
 			}
 			if (null != timerBlock) {
@@ -150,6 +148,9 @@ namespace IngameScript {
 			var sc = GetShipController(MultiMix_UsedBlocks, true);
 
 			if (null != timerBlock) {
+				bool alignActive = alignMgr?.Active ?? false;
+				bool cargoActive = cargoMgr?.Active ?? true;
+
 				alignMgr = alignMgr ?? new AlignModule(this);
 				ascDecMgr = ascDecMgr ?? new AscendDecendModule(this);
 				cargoMgr = cargoMgr ?? new CargoModule(this);
@@ -157,7 +158,10 @@ namespace IngameScript {
 
 				alignMgr.Refresh(ascDecMgr, sc);
 				ascDecMgr.Refresh(lcdRight, alignMgr, sc);
-				cargoMgr.Refresh(lcdLeft, ascDecMgr);
+				cargoMgr.Refresh(lcdLeft);
+
+				alignMgr.Active = alignActive;
+				cargoMgr.Active = cargoActive;
 			} else {
 				alignMgr = null;
 				ascDecMgr = null;
@@ -255,6 +259,24 @@ namespace IngameScript {
 						(lst[0] as IMyRadioAntenna)?.TransmitMessage("HangarDoors", MyTransmitTarget.Default | MyTransmitTarget.Neutral);
 				})
 			);
+
+			//
+			menuMgr.Add(
+				Menu("My often used sequence").Add(
+					Menu(() => $"Lock-on to connector{ConnectorLockInfo}")
+						.Enter(()=>menuMgr.DoAction("connectorLock")),
+					Menu(() => $"Unlock from connector{ConnectorUnlockInfo}")
+						.Enter(()=>menuMgr.DoAction("connectorUnlock")),
+					Menu(() => LabelOnOff(alignMgr?.Active ?? false, "Align:", "ENABLED", "OFF"))
+						.Enter(()=>menuMgr.DoAction("toggleAlign")),
+					Menu(() => $"Direction {engineMgr?.GetText(1,"Front",18) ?? "n/a"}")
+						.Enter(()=>menuMgr.DoAction("toggleFront"))
+						.Collect(engineMgr),
+					Menu(() => $"Override {engineMgr?.GetText(2,"Back",18) ?? "n/a"}")
+						.Enter(()=>menuMgr.DoAction("thrustBack"))
+						.Collect(engineMgr)
+				)
+			);
 		}
 
 		//---------------
@@ -288,12 +310,12 @@ namespace IngameScript {
 		}
 		IEnumerable<int> UnlockFromConnector() {
 			ConnectorLockInfo="";
+			var lst = new List<IMyTerminalBlock>();
 
 			bool isLocked = false;
-			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => {
-				if (MyShipConnectorStatus.Connected == b.Status)
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me))
+				if (MyShipConnectorStatus.Connected == (b as IMyShipConnector).Status)
 					isLocked = true;
-			});
 			if (!isLocked) {
 				ConnectorUnlockInfo="Not locked";
 				yield return 2000;
@@ -301,33 +323,34 @@ namespace IngameScript {
 				yield break;
 			}
 			ConnectorUnlockInfo="Attempting unlock";
-			yield return 10;
-
-			ActionOnBlocksOfType<IMyBatteryBlock>(this, Me, b => {
-				b.OnlyDischarge = true;
-			});
-			yield return 100;
-
-			IMyShipController rc = GetShipController();
+			foreach(var b in GetBlocksOfType(lst,this,"battery",Me))
+				(b as IMyBatteryBlock).OnlyDischarge = true;
+			var rc = GetShipController();
 			if (null != rc)
 				rc.DampenersOverride = true;
 			yield return 10;
 
 			float atmosphere = -1;
-			ActionOnBlocksOfType<IMyParachute>(this, Me, b => {
-				if (b.IsWorking)
-					atmosphere = Math.Max(atmosphere, b.Atmosphere);
-			});
-			ThrustFlags tf = atmosphere > 0.3 ? ThrustFlags.Atmospheric : ThrustFlags.Ion;
-			SetEnabled(GetThrustBlocks(tf, this, Me), true);
+			foreach(var b in GetBlocksOfType(lst,this,"parachute",Me)) {
+				var p = b as IMyParachute;
+				if (p.IsWorking)
+					atmosphere = Math.Max(atmosphere, p.Atmosphere);
+			}
+			ThrustFlags tf = atmosphere > 0.5 ? ThrustFlags.Atmospheric : ThrustFlags.Ion;
+			SetEnabled(GetThrustBlocks(lst, tf, this, Me), true);
 			yield return 100;
 
-			GetBlocksOfType(this,"connector",Me).ForEach(c=>(c as IMyShipConnector).Disconnect());
+			foreach(var b in GetBlocksOfType(lst,this,"landinggear",Me))
+				(b as IMyLandingGear).Unlock();
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me))
+				(b as IMyShipConnector).Disconnect();
 			yield return 100;
-			
-			SetEnabled(GetBlocksOfType(this,"connector",Me),false);
+
+			SetEnabled(GetBlocksOfType(lst,this,"connector",Me),false);
+			SetEnabled(GetBlocksOfType(lst,this,"weapons",Me),true);
 			ConnectorUnlockInfo="Successful unlock";
 			yield return 5000;
+
 			ConnectorUnlockInfo="";
 		}
 
@@ -338,12 +361,12 @@ namespace IngameScript {
 		}
 		IEnumerable<int> AttemptLockToConnector() {
 			ConnectorUnlockInfo="";
+			var lst = new List<IMyTerminalBlock>();
 
 			bool isUnlocked = true;
-			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => {
-				if (MyShipConnectorStatus.Connected == b.Status)
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me))
+				if (MyShipConnectorStatus.Connected == (b as IMyShipConnector).Status)
 					isUnlocked = false;
-			});
 			if (!isUnlocked) {
 				ConnectorLockInfo="Already locked";
 				yield return 2000;
@@ -353,15 +376,15 @@ namespace IngameScript {
 			ConnectorLockInfo="Attempting lock";
 			yield return 10;
 
-			ActionOnBlocksOfType<IMyShipConnector>(this, Me, b => {
-				b.PullStrength = 0.0001f;
-				b.Enabled = true;
-			});
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me)) {
+				var c = b as IMyShipConnector;
+				c.PullStrength = 0.0001f;
+				c.Enabled = true;
+			}
 			yield return 100;
 			
 			int maxAttempts = 10;
 			bool isLocked = false;
-			List<IMyTerminalBlock> lst = new List<IMyTerminalBlock>();
 			do {
 				ConnectorLockInfo=$"Attempting ({maxAttempts})";
 				foreach(var b in GetBlocksOfType(lst,this,"connector",Me)) {
@@ -385,16 +408,15 @@ namespace IngameScript {
 
 			if (null!=alignMgr)
 				alignMgr.Active=false;
-			yield return 10;
-
-			SetEnabled(GetThrustBlocks(ThrustFlags.All, this, Me), false);
-			yield return 100;
-
-			ActionOnBlocksOfType<IMyBatteryBlock>(this,Me,b => {
-				b.OnlyRecharge = true;
-			});
+			SetEnabled(GetThrustBlocks(lst,ThrustFlags.All, this, Me), false);
+			SetEnabled(GetBlocksOfType(lst,this,"weapons",Me), false);
+			foreach(var b in GetBlocksOfType(lst,this,"landinggear",Me))
+				(b as IMyLandingGear).Lock();
+			foreach(var b in GetBlocksOfType(lst,this,"battery",Me))
+				(b as IMyBatteryBlock).OnlyRecharge = true;
 			ConnectorLockInfo="Successful lock";
 			yield return 5000;
+
 			ConnectorLockInfo="";
 		}
  	}

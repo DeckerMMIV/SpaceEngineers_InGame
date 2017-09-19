@@ -124,6 +124,35 @@ namespace IngameScript {
 					);
 				}
 
+				if (0 < GetBlocksOfType(Pgm,"landinggear",Me).Count) {
+					foundTools = true;
+					Action<int> lgMode=(wanted)=>{
+						var lst = GetBlocksOfType(Pgm,"landinggear",Me);
+						if (-1 == wanted) {
+							int[] cnts = {0,0,0};
+							foreach(var b in lst)
+								cnts[(int)(b as IMyLandingGear).LockMode]++;
+							wanted = 0 < cnts[1] ? 2 : 0; // `ReadyToLock` takes priority over `Unlocked`.
+						}
+						foreach(var b in lst) {
+							var l = b as IMyLandingGear;
+							switch ((int)l.LockMode) {
+							// BUG: Why is `LandingGearMode` not whitelisted?
+							case 0: break;
+							case 1: if (2==wanted) l.Lock(); break;
+							case 2: if (0==wanted) l.Unlock(); break;
+							}
+						}
+					};
+					tls.Add(
+						Menu(() => GetText("LandingGear",2))
+							.Collect(this)
+							.Enter($"toggleLandingGear", () => lgMode(-1))
+							.Left(() => lgMode(2))
+							.Right(() => lgMode(0))
+					);
+				}
+
 				if (HasProjectors()) {
 					foundTools = true;
 					MenuItem tp = Menu("Projectors").Add(
@@ -209,11 +238,22 @@ namespace IngameScript {
 				else if (fb is IMyShipWelder) Inc("Welder",fb);
 				else if (fb is IMyShipDrill) Inc("Drill",fb);
 				else if (fb is IMyOreDetector) Inc("OreDetector",fb);
+				else if (fb is IMyLandingGear && fb.IsWorking) {
+					var cnt = GetNC("LandingGear");
+					if ((fb as IMyLandingGear).IsLocked)
+						cnt.enabled++;
+					else
+						cnt.disabled++;
+				}
 			}
-			private void Inc(string name, IMyFunctionalBlock blk) {
+			Counters GetNC(string name) {
 				Counters cnt;
 				if (!namedCounters.TryGetValue(name, out cnt))
 					namedCounters.Add(name, cnt = new Counters());
+				return cnt;
+			}
+			void Inc(string name, IMyFunctionalBlock blk) {
+				var cnt = GetNC(name);
 				if (blk.IsWorking)
 					cnt.enabled++;
 				else
@@ -221,15 +261,20 @@ namespace IngameScript {
 			}
 			public void CollectTeardown() {}
 
-			public string GetText(string name) {
+			readonly string[,] labelsTrueFalse = new string[,]{{"ON","OFF"},{"ENABLED","DISABLED"},{"LOCKED","UNLOCKED"}};
+
+			public string GetText(string name, int i=0) {
 				Counters cnt;
 				if (!namedCounters.TryGetValue(name, out cnt))
 					return $"{name}: -- / --";
+				i = MathHelper.Clamp(i,0,labelsTrueFalse.Length-1);
+				string tru = labelsTrueFalse[i,0];
 				if (0 == cnt.disabled)
-					return $"{name}: ON {cnt.enabled} / --";
+					return $"{name}: {tru} {cnt.enabled} / --";
+				string fls = labelsTrueFalse[i,1];
 				if (0 == cnt.enabled)
-					return $"{name}: -- / {cnt.disabled} OFF";
-				return $"{name}: on {cnt.enabled} / {cnt.disabled} off";
+					return $"{name}: -- / {cnt.disabled} {fls}";
+				return $"{name}: {tru.ToLower()} {cnt.enabled} / {cnt.disabled} {fls.ToLower()}";
 			}
 
 			public void ToolDistance(string toolName, int dir) {
@@ -250,7 +295,7 @@ namespace IngameScript {
 			}
 
 			#region Sensor
-			private IMySensorBlock sensor = null;
+			IMySensorBlock sensor = null;
 			public bool HasSensors() {
 				return null!=NextBlockInGrid(Pgm,Me,sensor,0);
 			}
@@ -327,23 +372,22 @@ namespace IngameScript {
 			#endregion
 
 			#region Projector
-			private IMyProjector projector = null;
+			IMyProjector projector = null;
+
 			public bool HasProjectors() {
-				return null!=NextBlockInGrid(Pgm,Me,projector,0);
+				return null != NextBlockInGrid(Pgm,Me,projector,0);
 			}
 
 			public bool ToggleProjector() { 
-				if (null==projector)
-					return false;
-				return (projector.Enabled = !projector.Enabled) && projector.IsProjecting;
+				return null == projector ? false : (projector.Enabled = !projector.Enabled) & projector.IsProjecting;
 			}
 
 			public void ProjectorProp(int propId, int propVal) {
-				if (0==propId) {
+				if (0 == propId) {
 					projector = NextBlockInGrid(Pgm,Me,projector,propVal);
 					return;
 				}
-				if (null==projector)
+				if (null == projector)
 					return;
 
 				Func<Vector3I,int,int,Func<int,int,int>,Vector3I> updVec = (vec,idx,dir,mod) => {
@@ -369,26 +413,17 @@ namespace IngameScript {
 
 			public string ProjectorText(string pfx, int propId) {
 				string mfx="", sfx=(0==propId) ? "(no projectors)" : "???";
-				if (null!=projector) {
-					Func<Vector3I,int,int> getV = (vec,idx) => {
-						switch(idx) {
-						case 1: return vec.X;
-						case 2: return vec.Y;
-						case 3: return vec.Z;
-						}
-						return 0;
-					};
-
+				if (null != projector) {
 					switch(propId) {
 					case 0:
 						mfx = projector.Enabled?" [ON]":" [off]";
 						sfx = projector.CustomName;
 						break;
 					case 1: case 2: case 3:
-						sfx = getV(projector.ProjectionOffset,propId).ToString();
+						sfx = GetDim(projector.ProjectionOffset,propId).ToString();
 						break;
 					case 4: case 5: case 6:
-						sfx = $"{(getV(projector.ProjectionRotation,propId-3) * 90)} degrees";
+						sfx = $"{(GetDim(projector.ProjectionRotation,propId-3) * 90)} degrees";
 						break;
 					}
 				}
@@ -397,8 +432,9 @@ namespace IngameScript {
 			#endregion
 
 			#region Gravity
-			private IMyGravityGeneratorBase gravityGen = null;
-			private int factor = 1;
+			IMyGravityGeneratorBase gravityGen = null;
+			int factor = 1;
+
 			public bool HasGravityGenerators() {
 				return null != NextBlockInGrid(Pgm,Me,gravityGen,0);
 			}
@@ -408,11 +444,11 @@ namespace IngameScript {
 			}
 
 			public void GravityGeneratorProp(int propId, int propVal) {
-				if (0==propId) {
+				if (0 == propId) {
 					gravityGen = NextBlockInGrid(Pgm,Me,gravityGen,propVal);
 					return;
 				}
-				if (null==gravityGen)
+				if (null == gravityGen)
 					return;
 
 				Func<Vector3,int,int,Vector3> updVec = (vec,idx,dir) => {
@@ -426,16 +462,15 @@ namespace IngameScript {
 
 				switch (propId) {
 				case 1: case 2: case 3:
-					if (0==propVal) {
+					if (0 == propVal) {
 						factor *= 10;
-						if (100 < factor) {
+						if (100 < factor)
 							factor = 1;
-						}
 						break;
 					}
 					var gravGenBox = gravityGen as IMyGravityGenerator;
 					if (null != gravGenBox) {
-					 gravGenBox.FieldSize = updVec(gravGenBox.FieldSize, propId, propVal * factor);
+						gravGenBox.FieldSize = updVec(gravGenBox.FieldSize, propId, propVal * factor);
 					} else {
 						var gravGenSphere = gravityGen as IMyGravityGeneratorSphere;
 						if (null != gravGenSphere) {
@@ -444,23 +479,17 @@ namespace IngameScript {
 					}
 					break;
 				case 4:
-					gravityGen.GravityAcceleration += propVal;
+					if (0 == propVal) 
+						gravityGen.GravityAcceleration = 0;
+					else
+						gravityGen.GravityAcceleration += propVal;
 					break;
 				}
 			}
 
 			public string GravityGeneratorText(string pfx, int propId) {
 				string mfx="", sfx=(0==propId) ? "(no grav.generators)" : "???";
-				if (null!=gravityGen) {
-					Func<Vector3,int,float> getV = (vec,idx) => {
-						switch(idx) {
-						case 1: return vec.X;
-						case 2: return vec.Y;
-						case 3: return vec.Z;
-						}
-						return 0;
-					};
-
+				if (null != gravityGen) {
 					switch(propId) {
 					case 0:
 						mfx = gravityGen.Enabled?" [ON]":" [off]";
@@ -469,7 +498,7 @@ namespace IngameScript {
 					case 1: case 2: case 3:
 						var gravGenBox = gravityGen as IMyGravityGenerator;
 						if (null != gravGenBox) {
-							sfx = $"{getV(gravGenBox.FieldSize,propId):F0}   (+/-{factor})";
+							sfx = $"{GetDim(gravGenBox.FieldSize,propId):F0}   (+/-{factor})";
 						} else {
 							var gravGenSphere = gravityGen as IMyGravityGeneratorSphere;
 							if (null != gravGenSphere) {
@@ -485,6 +514,23 @@ namespace IngameScript {
 				return $"{pfx}{mfx}: {sfx}";
 			}
 			#endregion
+
+			int GetDim(Vector3I vec, int idx) {
+				switch (idx) {
+				case 1: return vec.X;
+				case 2: return vec.Y;
+				case 3: return vec.Z;
+				}
+				return 0;
+			}
+			float GetDim(Vector3 vec, int idx) {
+				switch (idx) {
+				case 1: return vec.X;
+				case 2: return vec.Y;
+				case 3: return vec.Z;
+				}
+				return 0;
+			}
 		}
 	}
 }

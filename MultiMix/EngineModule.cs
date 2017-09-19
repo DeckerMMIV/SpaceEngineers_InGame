@@ -74,22 +74,21 @@ namespace IngameScript {
 				if (null == Pgm.GetShipController())
 					menuMgr.WarningText += "\n ShipController missing. Some features unavailable!";
 				else {
-					Action<ThrustFlags, int> tsPower = (tf, m) => {
+					Action<ThrustFlags, float> tsPower = (tf, modifier) => {
 						var lst = GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController());
-						if (0 != m) {
-							int o = 0;
+						if (0 != modifier && 0 < lst.Count) {
+							float current = 0;
 							foreach(var b in lst)
-								o += (int)((b as IMyThrust).GetValueFloat("Override"));
+								current += (b as IMyThrust).GetValueFloat("Override");
 
-							if (100 == m)
-								m = 0 < o ? 0 : m;
+							if (100f == modifier)
+								modifier = 0 < current ? 0 : 1; // Toggle between 0% and 100% thrust
 							else {
-								if (0 < lst.Count)
-									o /= lst.Count;
-								m = Math.Min(100, Math.Max(0, o + m * 10));
+								current /= lst.Count;
+								modifier = MathHelper.Clamp(current + Math.Sign(modifier) * 0.1f, 0, 1); // Inc./dec. thrust by 10%
 							}
 						}
-						SetThrustAbsPct(lst, m);
+						SetThrustAbsPct(lst, modifier);
 					};
 
 					MenuItem md = Menu("Directions");
@@ -110,7 +109,7 @@ namespace IngameScript {
 						mo.Add(
 							Menu(()=>GetText(2,txt,pad[j]))
 								.Collect(this)
-								.Enter($"thrust{txt}",()=>tsPower(tf,100))
+								.Enter($"thrust{txt}",()=>tsPower(tf,100f))
 								.Left(()=>tsPower(tf,-1))
 								.Right(()=>tsPower(tf,1))
 								.Back(()=>tsPower(tf,0))

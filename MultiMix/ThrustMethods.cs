@@ -17,27 +17,27 @@ using VRageMath;
 namespace IngameScript {
 	partial class Program {
 		//-------------
-		public static int SetThrustAbsPct(List<IMyTerminalBlock> blocks, int absPct) {
-			return ApplyThrustPct(blocks, absPct, 0);
+		public static float SetThrustAbsPct(List<IMyTerminalBlock> blks, float absPct) {
+			return ApplyThrustPct(blks, absPct, 0);
 		}
 
-		public static int ChangeThrustDiffPct(List<IMyTerminalBlock> blocks, int diffPct) {
-			return ApplyThrustPct(blocks, -1, diffPct);
+		public static float ChangeThrustDiffPct(List<IMyTerminalBlock> blks, float diffPct) {
+			return ApplyThrustPct(blks, -1, diffPct);
 		}
 
-		private static int ApplyThrustPct(List<IMyTerminalBlock> blocks, int absPct, int diffPct) {
+		private static float ApplyThrustPct(List<IMyTerminalBlock> blks, float absPct, float diffPct) {
 			float sumMaxOverride = 0, sumNewOverride = 0, maxOverride, newOverride, pct;
 			Func<float, IMyThrust, float, float> calcThrust;
 			if (0 != diffPct) {
-				pct = diffPct / 100f;
+				pct = MathHelper.Clamp(diffPct, -1, 1);
 				calcThrust = (pct2, t, maxT) => { return Math.Max(0, Math.Min(t.GetValueFloat("Override") + (maxT * pct2), maxT)); };
 			} else if (0 <= absPct) {
-				pct = Math.Min(absPct / 100f, 1f);
+				pct = MathHelper.Clamp(absPct, 0, 1);
 				calcThrust = (pct2, t, maxT) => { return maxT * pct2; };
 			} else
 				return 0;
 
-			foreach(var b in blocks) {
+			foreach(var b in blks) {
 				var t = b as IMyThrust;
 				if (null != t) {
 					t.SetValueFloat("Override", newOverride = calcThrust(pct, t, maxOverride = t.GetMaximum<float>("Override")));
@@ -45,7 +45,7 @@ namespace IngameScript {
 					sumNewOverride += newOverride;
 				}
 			}
-			return (int)((sumNewOverride * 100f) / Math.Max(1f, sumMaxOverride));
+			return 0 >= sumMaxOverride ? 0 : sumNewOverride / sumMaxOverride;
 		}
 
 		//-------
@@ -80,8 +80,12 @@ namespace IngameScript {
 		}
 
 		public static List<IMyTerminalBlock> GetThrustBlocks(ThrustFlags flags, Program pgm, IMyTerminalBlock myGrid = null, IMyTerminalBlock dirRefBlk = null) {
+			return GetThrustBlocks(new List<IMyTerminalBlock>(), flags, pgm, myGrid, dirRefBlk);
+		}
+
+		public static List<IMyTerminalBlock> GetThrustBlocks(List<IMyTerminalBlock> lst, ThrustFlags flags, Program pgm, IMyTerminalBlock myGrid = null, IMyTerminalBlock dirRefBlk = null) {
 			// Default return value is an empty list
-			var res = new List<IMyTerminalBlock>();
+			lst.Clear();
 
 			ThrustFlags engineTypes = flags & ThrustFlags.AllEngines;
 			if (ThrustFlags.AllEngines == engineTypes)
@@ -100,10 +104,10 @@ namespace IngameScript {
 
 			if (0 < thrustDirections && null == dirRefBlk)
 				// Requested specific thrust-direction(s), but missing a 'directionReferenceBlock' for orientation
-				return res;
+				return lst;
 
 			// Collect the thrust-blocks which matches criteria of the thrust-flags requested
-			pgm.GridTerminalSystem.GetBlocksOfType<IMyThrust>(res, thr => {
+			pgm.GridTerminalSystem.GetBlocksOfType<IMyThrust>(lst, thr => {
 				if (null != myGrid && !SameGrid(thr, myGrid))
 					// Requested that thruster should be on same grid as the ´myGrid´ block, but it was not
 					return false;
@@ -145,7 +149,7 @@ namespace IngameScript {
 				return 0 != ((int)thrustDirections & (1 << blkDir)); // Is direction accepted?
 			});
 
-			return res;
+			return lst;
 		}
 	}
 }
