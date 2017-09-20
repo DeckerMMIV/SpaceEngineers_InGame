@@ -85,7 +85,7 @@ namespace IngameScript {
 				align = _align;
 				sc = _sc ?? Pgm.GetShipController(MultiMix_UsedBlocks);
 
-				RefreshThrustsList(null != _align ? _align.RocketMode : false);
+				RefreshThrustsList(_align?.RocketMode ?? false);
 
 				hydrogenTanks.Clear();
 
@@ -177,11 +177,10 @@ namespace IngameScript {
 				shipWeight = gravityStrength * shipMass.PhysicalMass; // or -> shipMass.TotalMass
 
 				prevAltitude = altitudeSurface;
-				if (!sc.TryGetPlanetElevation(MyPlanetElevation.Surface, out altitudeSurface)) {
-					altitudeSurface = double.NaN;
-					altitudeDiff = double.NaN;
-				} else {
+				if (sc.TryGetPlanetElevation(MyPlanetElevation.Surface, out altitudeSurface)) {
 					altitudeDiff = altitudeSurface - prevAltitude;
+				} else {
+					altitudeSurface = altitudeDiff = double.NaN;
 				}
 
 				atmosphereDensity = parachute?.Atmosphere ?? float.NaN;
@@ -244,7 +243,7 @@ namespace IngameScript {
 					sb1.Append($"\n Raycast: {raycastName}");
 				}
 				sb1.Append($"\n Mass: {shipMass.PhysicalMass:#,##0} \u2022 Cargo: {shipMass.PhysicalMass - shipMass.BaseMass:#,##0}");
-				sb1.Append("\n Controller: ").Append(null != sc ? sc.CustomName : "<NONE>");
+				sb1.Append("\n Controller: ").Append(sc?.CustomName ?? "<NONE>");
 				sb1.Append($"\n Requested: ").Append(NumStr(totalThrustWanted, "N")).Append(" \u2022 Current: ").Append(NumStr(sumThrustCurEff, "N"));
 
 				sb1.Append(sb2);
@@ -326,6 +325,10 @@ namespace IngameScript {
 
 			bool abortStateMachine;
 			IEnumerable<int> AscendStateMachine() {
+				align.Inverted = false;
+				align.IgnoreGravity = false;
+				align.Active = false;
+
 				// Loop and increase thrust until (upwards) movement detected
 				curState = "Pending Liftoff";
 				thrustPct = 0.5f;
@@ -334,9 +337,7 @@ namespace IngameScript {
 					if (abortStateMachine) yield break;
 				}
 
-				// Activate gravity-alignment
 				curState = "GravityAlignEnable";
-				align.Inverted = false;
 				align.Active = true;
 				sc.DampenersOverride = false;
 
@@ -347,16 +348,15 @@ namespace IngameScript {
 					if (abortStateMachine) yield break;
 				} while (State_MaintainLift());
 
-				// Brake!
+				// Rotate for retro-thrust
 				curState = "VelocityAlignEnable";
-				align.Inverted = false;
 				align.Active = true; // Force update
 				ThrustZero();
 				ThrustStatus();
 				yield return 100;
 				if (abortStateMachine) yield break;
 
-				// Wait for no movement
+				// Brake and wait for minimal movement
 				curState = "Braking";
 				sc.DampenersOverride = true;
 				while (State_HasMovement()) {
@@ -386,7 +386,7 @@ namespace IngameScript {
 			bool State_HasMovement() {
 				UpdateTelemetry();
 				ThrustStatus();
-				return 0 < currSpeed;
+				return 0.1 < currSpeed;
 			}
 
 			int parachuteHeight = 1000;
@@ -416,22 +416,21 @@ namespace IngameScript {
 			IEnumerable<int> DescendStateMachine() {
 				sb2.Clear();
 
-				// Initialize
+				align.Inverted = false;
+				align.IgnoreGravity = false;
+				align.Active = false;
+
 				curState = "Initialize";
 				thrustPct = 1.0f;
-				//State_DampenersOff();
 				sc.DampenersOverride = false;
 				yield return 100;
 				if (abortStateMachine) yield break;
 
-				// Disable gravity-alignment
 				curState = "GravityAlignDisable";
-				align.Inverted = false;
 				align.Active = false;
 				yield return 100;
 				if (abortStateMachine) yield break;
 
-				//
 				curState = "FreeFalling";
 				while (State_AboveBrakeDistance(10)) {
 					if (currSpeed > MaxSpeed)
@@ -440,24 +439,19 @@ namespace IngameScript {
 					if (abortStateMachine) yield break;
 				}
 
-				// Enable gravity-alignment
 				curState = "GravityAlignEnable";
-				align.Inverted = false;
 				align.Active = true;
 				yield return 100;
 				if (abortStateMachine) yield break;
 
-				//
 				curState = "MaintainMaxSpeed";
 				while (State_AboveBrakeDistance(BrakeDistanceFactor)) {
-					// Maintain max speed
 					if (align.IsAligned)
 						ReduceToMaxSpeed();
 					yield return 300;
 					if (abortStateMachine) yield break;
 				}
 
-				//
 				curState = "Braking";
 				ThrustZero();
 				sc.DampenersOverride = true;
@@ -466,9 +460,9 @@ namespace IngameScript {
 					if (abortStateMachine) yield break;
 				}
 
-				//
 				curState = "Completed";
 				align.Active = false;
+				ThrustStatus();
 			}
 
 			double brakeDistance;
@@ -478,10 +472,7 @@ namespace IngameScript {
 
 				double brakeForce = maxThrust - shipWeight;
 				double deceleration = brakeForce / shipMass.PhysicalMass; // or -> shipMass.TotalMass
-				//brakeDistance = (currSpeed * currSpeed) / (2 * deceleration);
 
-				//double time = currSpeed / deceleration;
-				//brakeDistance = time * currSpeed / 2;
 				brakeDistance = (currSpeed / 2) * (currSpeed / deceleration);
 			}
 
@@ -498,7 +489,7 @@ namespace IngameScript {
 				UpdateTelemetry();
 				UpdateBrakeDistance();
 				ThrustStatus();
-				return currSpeed > 0;
+				return 0.1 < currSpeed;
 			}
 
 			float GetRequiredMinimumEffectiveThrust(int thrustType) {

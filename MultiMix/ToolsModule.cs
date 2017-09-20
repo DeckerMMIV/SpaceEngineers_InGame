@@ -18,32 +18,32 @@ namespace IngameScript {
 	partial class Program {
 		//-------------
 		ToolsModule toolsMgr = null;
-		class ToolsModule : TickBase, IMenuCollector {
+		class ToolsModule : ModuleBase, IMenuCollector {
 			public ToolsModule(Program p) : base(p) {}
 
-			override public bool Tick() { return false; }
+			const string GR="Grinder",WL="Welder",OD="OreDetector",DR="Drill",LG="LandingGear",BL="BeamLength";
 
 			public void AddMenu(MenuManager menuMgr) {
 				var tls = Menu("Tools");
 				bool foundTools = false;
 
-				foreach (string tool in new[] { "Grinder", "Welder", "OreDetector", "Drill" })
+				foreach (string tool in new[] { GR, WL, OD, DR })
 					if (HasTool(tool)) {
 						foundTools = true;
 						tls.Add(
 							Menu(() => GetText(tool))
 								.Collect(this)
-								.Enter($"toggle{tool}", () => ToolToggle(tool))
+								.Enter("toggle"+tool, () => ToolToggle(tool))
 								.Back(() => ToolEnable(tool, false))
 								.Left(() => ToolDistance(tool, -1))
 								.Right(() => ToolDistance(tool, 1))
 						);
 					}
 
-				if (HasTool("Drill")) {
+				if (HasTool(DR)) {
 					Action<int> yawRotate = (dir) => {
 						ActionOnBlocksOfType<IMyGyro>(Pgm, Me, g=>{
-							if (NameContains(g, "DRILL")) {
+							if (NameContains(g, DR)) {
 								float yawRpm = g.Yaw;
 								if (0 == dir)
 									if (g.Enabled)
@@ -60,12 +60,14 @@ namespace IngameScript {
 							}
 						});
 					};
+
 					tls.Add(
 						Menu("Yaw rotation  left< toggle >right")
 							.Enter("toggleYaw", () => yawRotate(0))
 							.Left(() => yawRotate(-1))
 							.Right(() => yawRotate(1))
 					);
+
 					Pgm.cargoMgr?.AddMenu(tls);
 				}
 
@@ -80,10 +82,10 @@ namespace IngameScript {
 					};
 
 					int i=0;
-					MenuItem te=Menu("Extend/Boundaries");
+					MenuItem bbox=Menu("Extend/Boundaries");
 					foreach(string txt in Pgm.DIRECTIONS) {
 						int j=++i;
-						te.Add(
+						bbox.Add(
 							Menu(()=>SensorText(txt,j,pad[j]))
 								.Left(()=>SensorProp(j,-1))
 								.Right(()=>SensorProp(j,1))
@@ -92,20 +94,20 @@ namespace IngameScript {
 					}
 
 					i=10;
-					MenuItem to=Menu("Object detection");
+					MenuItem typs=Menu("Object detection");
 					foreach(string txt in new[] {"Large ships","Small ships","Stations","Subgrids","Players","Asteroids","Floating obj."}) {
 						int j=++i;
-						to.Add(
+						typs.Add(
 							Menu(()=>SensorText(txt,j,pad[j]))
 								.Enter(()=>SensorProp(j,0))
 						);
 					}
 
 					i=20;
-					MenuItem tf=Menu("Faction recognition");
+					MenuItem fctn=Menu("Faction recognition");
 					foreach(string txt in new[] {"Owner","Friendly","Neutral","Enemy"}) {
 						int j=++i;
-						tf.Add(
+						fctn.Add(
 							Menu(()=>SensorText(txt,j,pad[j]))
 								.Enter(()=>SensorProp(j,0))
 						);
@@ -117,17 +119,17 @@ namespace IngameScript {
 								.Left(()=>SensorProp(0,-1))
 								.Right(()=>SensorProp(0,1))
 								.Enter(()=>ToggleSensor()),
-							te,
-							to,
-							tf
+							bbox,
+							typs,
+							fctn
 						)
 					);
 				}
 
-				if (0 < GetBlocksOfType(Pgm,"landinggear",Me).Count) {
+				if (0 < GetBlocksOfType(Pgm,LG,Me).Count) {
 					foundTools = true;
 					Action<int> lgMode=(wanted)=>{
-						var lst = GetBlocksOfType(Pgm,"landinggear",Me);
+						var lst = GetBlocksOfType(Pgm,LG,Me);
 						if (-1 == wanted) {
 							int[] cnts = {0,0,0};
 							foreach(var b in lst)
@@ -145,9 +147,9 @@ namespace IngameScript {
 						}
 					};
 					tls.Add(
-						Menu(() => GetText("LandingGear",2))
+						Menu(() => GetText(LG,2))
 							.Collect(this)
-							.Enter($"toggleLandingGear", () => lgMode(-1))
+							.Enter("toggle"+LG, () => lgMode(-1))
 							.Left(() => lgMode(2))
 							.Right(() => lgMode(0))
 					);
@@ -226,69 +228,69 @@ namespace IngameScript {
 				return namedCounters.ContainsKey(toolName);
 			}
 
-			class Counters { public int enabled; public int disabled; }
-			Dictionary<string, Counters> namedCounters = new Dictionary<string, Counters>();
 			public void CollectSetup() {
 				namedCounters.Clear();
 			}
+			public void CollectTeardown() {}
 			public void CollectBlock(IMyTerminalBlock blk) {
 				var fb = blk as IMyFunctionalBlock;
 				if (null==fb || !SameGrid(Me,fb)) {}
-				else if (fb is IMyShipGrinder) Inc("Grinder",fb);
-				else if (fb is IMyShipWelder) Inc("Welder",fb);
-				else if (fb is IMyShipDrill) Inc("Drill",fb);
-				else if (fb is IMyOreDetector) Inc("OreDetector",fb);
+				else if (fb is IMyShipGrinder) Inc(GR,fb);
+				else if (fb is IMyShipWelder) Inc(WL,fb);
+				else if (fb is IMyShipDrill) Inc(DR,fb);
+				else if (fb is IMyOreDetector) Inc(OD,fb);
 				else if (fb is IMyLandingGear && fb.IsWorking) {
-					var cnt = GetNC("LandingGear");
+					var cnt = GetCounters(LG);
 					if ((fb as IMyLandingGear).IsLocked)
-						cnt.enabled++;
+						cnt.pri++;
 					else
-						cnt.disabled++;
+						cnt.sec++;
 				}
 			}
-			Counters GetNC(string name) {
+
+			class Counters { public int pri; public int sec; }
+			Dictionary<string, Counters> namedCounters = new Dictionary<string, Counters>();
+
+			Counters GetCounters(string name) {
 				Counters cnt;
 				if (!namedCounters.TryGetValue(name, out cnt))
 					namedCounters.Add(name, cnt = new Counters());
 				return cnt;
 			}
 			void Inc(string name, IMyFunctionalBlock blk) {
-				var cnt = GetNC(name);
+				var cnt = GetCounters(name);
 				if (blk.IsWorking)
-					cnt.enabled++;
+					cnt.pri++;
 				else
-					cnt.disabled++;
+					cnt.sec++;
 			}
-			public void CollectTeardown() {}
 
-			readonly string[,] labelsTrueFalse = new string[,]{{"ON","OFF"},{"ENABLED","DISABLED"},{"LOCKED","UNLOCKED"}};
+			readonly string[,] labels = new string[,]{{"ON","OFF"},{"ENABLED","DISABLED"},{"LOCKED","UNLOCKED"}};
 
 			public string GetText(string name, int i=0) {
 				Counters cnt;
 				if (!namedCounters.TryGetValue(name, out cnt))
 					return $"{name}: -- / --";
-				i = MathHelper.Clamp(i,0,labelsTrueFalse.Length-1);
-				string tru = labelsTrueFalse[i,0];
-				if (0 == cnt.disabled)
-					return $"{name}: {tru} {cnt.enabled} / --";
-				string fls = labelsTrueFalse[i,1];
-				if (0 == cnt.enabled)
-					return $"{name}: -- / {cnt.disabled} {fls}";
-				return $"{name}: {tru.ToLower()} {cnt.enabled} / {cnt.disabled} {fls.ToLower()}";
+				i = MathHelper.Clamp(i,0,labels.Length-1);
+				if (0 == cnt.sec)
+					return $"{name}: {labels[i,0]} {cnt.pri} / --";
+				if (0 == cnt.pri)
+					return $"{name}: -- / {cnt.sec} {labels[i,1]}";
+				return $"{name}: {labels[i,0].ToLower()} {cnt.pri} / {cnt.sec} {labels[i,1].ToLower()}";
 			}
 
 			public void ToolDistance(string toolName, int dir) {
-				var blks = GetBlocksOfType(Pgm,toolName,Me);
-				if (1 > blks.Count)
+				var lst = GetBlocksOfType(Pgm,toolName,Me);
+				if (1 > lst.Count)
 					return;
 
 				try {
-					blks[0].GetProperty("BeamLength");
-					var blk = blks[0];
-					float beamLength = blk.GetValueFloat("BeamLength");
+					lst[0].GetProperty(BL);
+					var blk = lst[0];
+					float beamLength = blk.GetValueFloat(BL);
 					beamLength = MathHelper.Clamp(beamLength+dir, 1, 20);
-					foreach(var b in blks)
-						b.SetValueFloat("BeamLength",beamLength);
+					foreach(var b in lst)
+						b.SetValueFloat(BL,beamLength);
 				} catch(Exception) {
 					// Ignored
 				}
@@ -297,13 +299,11 @@ namespace IngameScript {
 			#region Sensor
 			IMySensorBlock sensor = null;
 			public bool HasSensors() {
-				return null!=NextBlockInGrid(Pgm,Me,sensor,0);
+				return null != NextBlockInGrid(Pgm,Me,sensor,0);
 			}
 
 			public bool ToggleSensor() {
-				if (null==sensor)
-					return false;
-				return sensor.Enabled = !sensor.Enabled;
+				return null == sensor ? false : (sensor.Enabled = !sensor.Enabled);
 			}
 
 			public void SensorProp(int propId, int propVal) {
@@ -338,13 +338,11 @@ namespace IngameScript {
 			}
 
 			public string SensorText(string lbl, int propId, int p=16) {
-				string mfx="", sfx= (0==propId) ? "(no sensor selected)" : "???";
+				string mfx="", sfx= (0==propId) ? "(select sensor)" : "???";
 				if (null!=sensor) {
-					Func<bool,string> yn = (b) => { return b?"YES/--":"--/no"; };
-
 					switch(propId) {
 					case 0:
-						mfx = sensor.Enabled?" [ON]":" [off]";
+						mfx = OnOff(sensor.Enabled);
 						sfx = sensor.CustomName;
 						break;
 					case 1: sfx=$"{sensor.FrontExtend:F0}"; break;
@@ -353,17 +351,17 @@ namespace IngameScript {
 					case 4: sfx=$"{sensor.RightExtend:F0}"; break;
 					case 5: sfx=$"{sensor.TopExtend:F0}"; break;
 					case 6: sfx=$"{sensor.BottomExtend:F0}"; break;
-					case 11: sfx=yn(sensor.DetectLargeShips); break;
-					case 12: sfx=yn(sensor.DetectSmallShips); break;
-					case 13: sfx=yn(sensor.DetectStations); break;
-					case 14: sfx=yn(sensor.DetectSubgrids); break;
-					case 15: sfx=yn(sensor.DetectPlayers); break;
-					case 16: sfx=yn(sensor.DetectAsteroids); break;
-					case 17: sfx=yn(sensor.DetectFloatingObjects); break;
-					case 21: sfx=yn(sensor.DetectOwner); break;
-					case 22: sfx=yn(sensor.DetectFriendly); break;
-					case 23: sfx=yn(sensor.DetectNeutral); break;
-					case 24: sfx=yn(sensor.DetectEnemy); break;
+					case 11: sfx=YesNo(sensor.DetectLargeShips); break;
+					case 12: sfx=YesNo(sensor.DetectSmallShips); break;
+					case 13: sfx=YesNo(sensor.DetectStations); break;
+					case 14: sfx=YesNo(sensor.DetectSubgrids); break;
+					case 15: sfx=YesNo(sensor.DetectPlayers); break;
+					case 16: sfx=YesNo(sensor.DetectAsteroids); break;
+					case 17: sfx=YesNo(sensor.DetectFloatingObjects); break;
+					case 21: sfx=YesNo(sensor.DetectOwner); break;
+					case 22: sfx=YesNo(sensor.DetectFriendly); break;
+					case 23: sfx=YesNo(sensor.DetectNeutral); break;
+					case 24: sfx=YesNo(sensor.DetectEnemy); break;
 					}
 				}
 				string nme=$"{lbl}{mfx}:".PadRight(p);
@@ -390,33 +388,24 @@ namespace IngameScript {
 				if (null == projector)
 					return;
 
-				Func<Vector3I,int,int,Func<int,int,int>,Vector3I> updVec = (vec,idx,dir,mod) => {
-					switch (idx) {
-					case 1: vec.X = 0!=dir ? mod(vec.X, dir) : 0; break;
-					case 2: vec.Y = 0!=dir ? mod(vec.Y, dir) : 0; break;
-					case 3: vec.Z = 0!=dir ? mod(vec.Z, dir) : 0; break;
-					}
-					return vec;
-				};
-
 				switch (propId) {
 				case 1: case 2: case 3:
-					projector.ProjectionOffset = updVec(projector.ProjectionOffset, propId, propVal, (v, d) => { return Math.Min(20, Math.Max(-20, (v + d))); });
+					projector.ProjectionOffset = UpdDim(projector.ProjectionOffset, propId, propVal, (v, d) => { return MathHelper.Clamp(v + d, -50, 50); });
 					projector.UpdateOffsetAndRotation();
 					break;
 				case 4: case 5: case 6:
-					projector.ProjectionRotation = updVec(projector.ProjectionRotation, propId - 3, propVal, (v, d) => { return ((v+4) + d) % 4; });
+					projector.ProjectionRotation = UpdDim(projector.ProjectionRotation, propId - 3, propVal, (v, d) => { return ((v+4) + d) % 4; });
 					projector.UpdateOffsetAndRotation();
 					break;
 				}
 			}
 
 			public string ProjectorText(string pfx, int propId) {
-				string mfx="", sfx=(0==propId) ? "(no projectors)" : "???";
+				string mfx="", sfx=(0==propId) ? "(select projector)" : "???";
 				if (null != projector) {
 					switch(propId) {
 					case 0:
-						mfx = projector.Enabled?" [ON]":" [off]";
+						mfx = OnOff(projector.Enabled);
 						sfx = projector.CustomName;
 						break;
 					case 1: case 2: case 3:
@@ -451,15 +440,6 @@ namespace IngameScript {
 				if (null == gravityGen)
 					return;
 
-				Func<Vector3,int,int,Vector3> updVec = (vec,idx,dir) => {
-					switch (idx) {
-					case 1: vec.X += dir; break;
-					case 2: vec.Y += dir; break;
-					case 3: vec.Z += dir; break;
-					}
-					return vec;
-				};
-
 				switch (propId) {
 				case 1: case 2: case 3:
 					if (0 == propVal) {
@@ -470,7 +450,7 @@ namespace IngameScript {
 					}
 					var gravGenBox = gravityGen as IMyGravityGenerator;
 					if (null != gravGenBox) {
-						gravGenBox.FieldSize = updVec(gravGenBox.FieldSize, propId, propVal * factor);
+						gravGenBox.FieldSize = UpdDim(gravGenBox.FieldSize, propId, propVal * factor);
 					} else {
 						var gravGenSphere = gravityGen as IMyGravityGeneratorSphere;
 						if (null != gravGenSphere) {
@@ -479,20 +459,17 @@ namespace IngameScript {
 					}
 					break;
 				case 4:
-					if (0 == propVal) 
-						gravityGen.GravityAcceleration = 0;
-					else
-						gravityGen.GravityAcceleration += propVal;
+					gravityGen.GravityAcceleration += 0 == propVal ? -gravityGen.GravityAcceleration : propVal;
 					break;
 				}
 			}
 
 			public string GravityGeneratorText(string pfx, int propId) {
-				string mfx="", sfx=(0==propId) ? "(no grav.generators)" : "???";
+				string mfx="", sfx=(0==propId) ? "(select gravity-gen.)" : "???";
 				if (null != gravityGen) {
 					switch(propId) {
 					case 0:
-						mfx = gravityGen.Enabled?" [ON]":" [off]";
+						mfx = OnOff(gravityGen.Enabled);
 						sfx = gravityGen.CustomName;
 						break;
 					case 1: case 2: case 3:
@@ -515,6 +492,13 @@ namespace IngameScript {
 			}
 			#endregion
 
+			string YesNo(bool b) {
+				return b ? "YES/--" : "--/no";
+			}
+			string OnOff(bool b) {
+				return b ? " [ON]" : " [off]";
+			}
+
 			int GetDim(Vector3I vec, int idx) {
 				switch (idx) {
 				case 1: return vec.X;
@@ -531,6 +515,24 @@ namespace IngameScript {
 				}
 				return 0;
 			}
+
+			Vector3I UpdDim(Vector3I vec,int idx,int dir,Func<int,int,int> adj) {
+				switch (idx) {
+				case 1: vec.X = 0 != dir ? adj(vec.X, dir) : 0; break;
+				case 2: vec.Y = 0 != dir ? adj(vec.Y, dir) : 0; break;
+				case 3: vec.Z = 0 != dir ? adj(vec.Z, dir) : 0; break;
+				}
+				return vec;
+			}
+			Vector3 UpdDim(Vector3 vec, int idx, float dir) {
+				switch (idx) {
+				case 1: vec.X += dir; break;
+				case 2: vec.Y += dir; break;
+				case 3: vec.Z += dir; break;
+				}
+				return vec;
+			}
+
 		}
 	}
 }

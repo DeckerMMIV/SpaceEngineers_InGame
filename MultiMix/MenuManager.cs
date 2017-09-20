@@ -17,8 +17,8 @@ using VRageMath;
 namespace IngameScript {
 	partial class Program {
 		//-------------
-		public static string LabelOnOff(bool on, string pfx, string onTxt="ON", string offTxt="off", string sfx="") {
-			return on ? $"{pfx} {onTxt}/--{sfx}" : $"{pfx} --/{offTxt}{sfx}";
+		public static string LabelOnOff(bool b, string pfx, string onTxt="ON", string offTxt="off", string sfx="") {
+			return b ? $"{pfx} {onTxt}/--{sfx}" : $"{pfx} --/{offTxt}{sfx}";
 		}
 
 		interface IMenuCollector {
@@ -28,12 +28,7 @@ namespace IngameScript {
 		}
 
 		class MenuCommands {
-			public const string cUp="UP";
-			public const string cDown="DOWN";
-			public const string cLeft="LEFT";
-			public const string cRight="RIGHT";
-			public const string cEnter="ENTER";
-			public const string cBack="BACK";
+			protected const string UP="UP",DOWN="DOWN",LEFT="LEFT",RIGHT="RIGHT",ENTER="ENTER",BACK="BACK";
 		}
 
 		MenuManager menuMgr = null;
@@ -71,9 +66,9 @@ namespace IngameScript {
 				recurse = (i, e) => {
 					if (null == e)
 						return;
-					foreach(var c in e) {
-						linearMenu.Add(c);
-						recurse((c.Indent = i) + 1, c.GetSubMenu());
+					foreach(var f in e) {
+						linearMenu.Add(f);
+						recurse((f.Indent = i) + 1, f.GetSubMenu());
 					}
 				};
 
@@ -90,7 +85,7 @@ namespace IngameScript {
 				sb.Append($"\u2022\u2022\u2022 Menu \u2022 MultiMix v{scriptVersion} \u2022\u2022\u2022 ").Append(DateTime.Now.ToString("HH\\:mm\\:ss\\.fff"));
 
 				if (firstTime) {
-					sb.Append($"\n MenuManager have been reinitialized. To\n control it please assign six cockpit toolbar-\n slots to run the programmable block with\n one of each argument:\n\n     {cUp}\n     {cDown}\n     {cLeft}\n     {cRight}\n\n     {cEnter}\n     {cBack}\n\n Once toolbar-slots are assigned, then\n use one of them to continue.\n")
+					sb.Append($"\n MenuManager have been reinitialized. To\n control it please assign six cockpit toolbar-\n slots to run the programmable block with\n one of each argument:\n\n     {UP}\n     {DOWN}\n     {LEFT}\n     {RIGHT}\n\n     {ENTER}\n     {BACK}\n\n Once toolbar-slots are assigned, then\n use one of them to continue.\n")
 					.Append('\u2022', 40);
 					return;
 				} 
@@ -157,21 +152,21 @@ namespace IngameScript {
 				};
 
 				if (firstTime) {
-					firstTime = !(new List<string> { cUp, cDown, cLeft, cRight, cEnter, cBack }).Contains(arg);
+					firstTime = !(new List<string> { UP,DOWN,LEFT,RIGHT,ENTER,BACK }).Contains(arg);
 					if (firstTime)
 						return recurse(mainMenu,arg);
-				} else if (cUp == arg) {
+				} else if (UP == arg) {
 					menuPos = (menuPos - 1 + linearMenu.Count) % linearMenu.Count;
-				} else if (cDown == arg) {
+				} else if (DOWN == arg) {
 					menuPos = (menuPos + 1) % linearMenu.Count;
 				} else {
 					MenuItem menu = linearMenu[menuPos];
 					bool prevVal = menu.ShowSubMenu;
 					switch (arg) {
-					case cLeft: menu.DoLeft(); break;
-					case cRight: menu.DoRight(); break;
-					case cEnter: menu.DoEnter(); break;
-					case cBack: menu.DoBack(); break;
+					case LEFT: menu.DoLeft(); break;
+					case RIGHT: menu.DoRight(); break;
+					case ENTER: menu.DoEnter(); break;
+					case BACK: menu.DoBack(); break;
 					default: return recurse(mainMenu,arg);
 					}
 					dirty = (menu.ShowSubMenu != prevVal);
@@ -298,16 +293,16 @@ namespace IngameScript {
 			}
 
 			public void AvailableCmds(StringBuilder sb) {
-				sb.Append($"{cUp},{cDown}");
+				sb.Append($"{UP},{DOWN}");
 				bool more = null != items;
 				if (null != actLeft || (more & showItems))
-					sb.Append($",{cLeft}");
+					sb.Append($",{LEFT}");
 				if (null != actRight || (more & !showItems))
-					sb.Append($",{cRight}");
+					sb.Append($",{RIGHT}");
 				if (null != actEnter || more)
-					sb.Append($",{cEnter}");
+					sb.Append($",{ENTER}");
 				if (null != actBack || (more & showItems))
-					sb.Append($",{cBack}");
+					sb.Append($",{BACK}");
 			}
 		}
 	}

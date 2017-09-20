@@ -35,7 +35,7 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "3.7.3"; // 2017-09-19
+		const string scriptVersion = "3.7.4"; // 2017-09-20
 
 		Program() { }
 		void Save() { }
@@ -302,6 +302,8 @@ namespace IngameScript {
 		//---------------
 
 		public readonly string[] DIRECTIONS = {"Front","Back","Left","Right","Top","Bottom"};
+
+		//---------------
 
 		private string unlockInfo="";
 		public string ConnectorUnlockInfo {

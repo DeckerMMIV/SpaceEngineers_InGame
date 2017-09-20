@@ -174,6 +174,10 @@ namespace IngameScript {
 		}
 
 		IEnumerable<int> CloseDoors(List<IMyTerminalBlock> doorsToClose) {
+			// Note: Using try-catch blocks here, in case the 'block' that is
+			// being acted upon, have "vanished" or been destroyed during the
+			// time this method gets through its 'yielding enumerator' flow.
+
 			// Flash doors that are about to close
 			for(int i=3; i>0; i--) {
 				foreach(var d in doorsToClose) {
@@ -183,7 +187,9 @@ namespace IngameScript {
 							door.Enabled = false;
 						}
 					} catch (Exception) {
-						// Ignore
+						// Ignore, and stop at the outer for-loop
+						i = 0;
+						break;
 					}
 				}
 				yield return 200;
@@ -191,7 +197,8 @@ namespace IngameScript {
 				try {
 					SetEnabled(doorsToClose, true);
 				} catch (Exception) {
-					// Ignore
+					// Ignore, and break out of the for-loop
+					break;
 				}
 				yield return 200;
 			}
@@ -202,7 +209,7 @@ namespace IngameScript {
 					door.Enabled = true;
 					door.CloseDoor();
 				} catch(Exception) {
-					// Ignore
+					// Ignore this door, but still attempt the others
 				}
 			}
 			yield return 1000;

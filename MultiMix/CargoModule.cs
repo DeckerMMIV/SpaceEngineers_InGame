@@ -18,7 +18,7 @@ namespace IngameScript {
 	partial class Program {
 		//-------------
 		CargoModule cargoMgr = null;
-		class CargoModule : TickBase {
+		class CargoModule : ModuleBase {
 			public CargoModule(Program p) : base(p) {}
 
 			public void AddMenu(MenuItem menu) {
@@ -58,8 +58,6 @@ namespace IngameScript {
 
 			StringBuilder sb = new StringBuilder();
 			bool wasLocked;
-
-			override public bool Tick() { return false; }
 
 			int instanceNum = 0;
 			IEnumerable<int> Update() {

@@ -18,10 +18,8 @@ namespace IngameScript {
 	partial class Program {
 		//-------------
 		EngineModule engineMgr = null;
-		class EngineModule : TickBase, IMenuCollector {
+		class EngineModule : ModuleBase, IMenuCollector {
 			public EngineModule(Program p) : base(p) {}
-
-			override public bool Tick() { return false; }
 
 			public void Refresh(IMyTerminalBlock _myGrid, IMyShipController _sc) {
 				myGrid = _myGrid;
@@ -102,14 +100,14 @@ namespace IngameScript {
 						md.Add(
 							Menu(()=>GetText(1,txt,pad[j]))
 								.Collect(this)
-								.Enter($"toggle{txt}",()=>tsToggle(tf))
+								.Enter("toggle"+txt,()=>tsToggle(tf))
 								.Left(()=>tsOn(tf))
 								.Right(()=>tsOff(tf))
 						);
 						mo.Add(
 							Menu(()=>GetText(2,txt,pad[j]))
 								.Collect(this)
-								.Enter($"thrust{txt}",()=>tsPower(tf,100f))
+								.Enter("thrust"+txt,()=>tsPower(tf,100f))
 								.Left(()=>tsPower(tf,-1))
 								.Right(()=>tsPower(tf,1))
 								.Back(()=>tsPower(tf,0))

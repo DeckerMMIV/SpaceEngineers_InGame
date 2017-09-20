@@ -18,7 +18,7 @@ namespace IngameScript {
 	partial class Program {
 		//-------------
 		AlignModule alignMgr = null;
-		class AlignModule : TickBase {
+		class AlignModule : ModuleBase {
 			public AlignModule(Program p) : base(p) {}
 
 			public void AddMenu(MenuManager menuMgr) {
@@ -39,8 +39,6 @@ namespace IngameScript {
 					)
 				);
 			}
-
-			override public bool Tick() { return false; }
 
 			AscendDecendModule asc = null;
 			IMyShipController sc = null;
