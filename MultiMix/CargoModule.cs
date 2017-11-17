@@ -38,7 +38,7 @@ namespace IngameScript {
 				);
 			}
 
-			new public bool Active {
+			public bool Active {
 				get { return isActive; }
 				set {
 					if (value)

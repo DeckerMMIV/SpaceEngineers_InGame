@@ -59,7 +59,7 @@ namespace IngameScript {
 				maxYaw = (0 < gyros.Count ? gyros[0].GetMaximum<float>("Yaw") : 0);
 			}
 
-			public new bool Active {
+			public bool Active {
 				get { return isActive; }
 				set {
 					if (value && null != sc) {

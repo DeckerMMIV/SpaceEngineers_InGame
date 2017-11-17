@@ -66,13 +66,6 @@ namespace IngameScript {
 
 				fastTrigger |= Tick(yieldMgr);
 			}
-			//if (null != timerBlock) {
-			//	// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
-			//	if (fastTrigger)
-			//		triggerNow.Apply(timerBlock);
-			//	else
-			//		timerBlock.ApplyAction("Start");
-			//}
 			if ((Runtime.UpdateFrequency & UpdateFrequency.Update10) != (fastTrigger ? UpdateFrequency.Update10 : 0)) {
 				Runtime.UpdateFrequency = UpdateFrequency.Update100 | (fastTrigger ? UpdateFrequency.Update10 : 0);
 			}
@@ -86,40 +79,13 @@ namespace IngameScript {
 			if (!NameContains(Me, DoorsAutoClose_UsedBlocks))
 				throw new Exception($"Programmable block does not have '{DoorsAutoClose_UsedBlocks}' in its custom-name.\nDid you read the instructions?");
 
-			//InitTimerBlock(DoorsAutoClose_UsedBlocks);
-
 			yieldMgr = yieldMgr ?? new YieldModule(this);
 
 			yieldMgr.Add(DoorCloserLooper());
 		}
 
-		//IMyTimerBlock timerBlock = null;
-		//ITerminalAction triggerNow = null;
-		//void InitTimerBlock(string tbName) {
-		//	// Try locating a timer-block that also contain the word(s)
-		//	timerBlock = null;
-		//	triggerNow = null;
-		//	int cnt = 0;
-		//	ActionOnBlocksOfType<IMyTimerBlock>(this, Me, b=>{
-		//		if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,DoorsAutoClose_IgnoreBlocks)) {
-		//			ToType(b, ref timerBlock);
-		//			cnt++;
-		//		}
-		//	});
-		//	if (null == timerBlock) {
-		//		Echo($"WARNING: TimerBlock for PB not found. Name should contain '{tbName}' and block must be enabled.");
-		//		return;
-		//	}
-		//	if (1 != cnt)
-		//		throw new Exception($"More than a required just one TimerBlock found, where '{tbName}' is contained in their names.");
-
-		//	timerBlock.TriggerDelay = 1;
-		//	triggerNow = timerBlock.GetActionWithName("TriggerNow");
-		//}
-
 		//--------------
 
-		
 		Dictionary<long, long> openDoors = new Dictionary<long, long>();
 		int numIteration = 0;
 

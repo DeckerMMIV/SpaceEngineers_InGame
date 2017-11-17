@@ -88,8 +88,6 @@ namespace IngameScript {
 		OutputPanel lcdLeft = new OutputPanel();
 		OutputPanel lcdCenter = new OutputPanel();
 		OutputPanel lcdRight = new OutputPanel();
-		//IMyTimerBlock timerBlock = null;
-		//ITerminalAction triggerNow = null;
 
 		void Main1(string args) {
 			bool fastTrigger = false;
@@ -121,14 +119,6 @@ namespace IngameScript {
 					menuMgr.DrawMenu(lcdCenter);
 				}
 			}
-			//if (null != timerBlock) {
-			//	//if (!timerBlock.StillExist()) { return; } // Failure!
-			//	// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
-			//	if (fastTrigger)
-			//		triggerNow.Apply(timerBlock);
-			//	else
-			//		timerBlock.ApplyAction("Start");
-			//}
 			if ((Runtime.UpdateFrequency & UpdateFrequency.Update1) != (fastTrigger ? UpdateFrequency.Update1 : 0)) {
 				Runtime.UpdateFrequency = UpdateFrequency.Update100 | (fastTrigger ? UpdateFrequency.Update1 : 0);
 			}
@@ -139,8 +129,6 @@ namespace IngameScript {
 		void Init() {
 			if (!NameContains(Me, MultiMix_UsedBlocks))
 				throw new Exception($"Programmable block does not have '{MultiMix_UsedBlocks}' in its custom-name.\nDid you read the instructions?");
-
-			//InitTimerBlock(MultiMix_UsedBlocks);
 
 			lcdLeft.Clear();
 			lcdCenter.Clear();
@@ -160,27 +148,20 @@ namespace IngameScript {
 
 			var sc = GetShipController(MultiMix_UsedBlocks, true);
 
-			//if (null != timerBlock) {
-				bool alignActive = alignMgr?.Active ?? false;
-				bool cargoActive = cargoMgr?.Active ?? true;
+			bool alignActive = alignMgr?.Active ?? false;
+			bool cargoActive = cargoMgr?.Active ?? true;
 
-				alignMgr = alignMgr ?? new AlignModule(this);
-				ascDecMgr = ascDecMgr ?? new AscendDecendModule(this);
-				cargoMgr = cargoMgr ?? new CargoModule(this);
-				yieldMgr = yieldMgr ?? new YieldModule(this);
+			alignMgr = alignMgr ?? new AlignModule(this);
+			ascDecMgr = ascDecMgr ?? new AscendDecendModule(this);
+			cargoMgr = cargoMgr ?? new CargoModule(this);
+			yieldMgr = yieldMgr ?? new YieldModule(this);
 
-				alignMgr.Refresh(ascDecMgr, sc);
-				ascDecMgr.Refresh(lcdRight, alignMgr, sc);
-				cargoMgr.Refresh(lcdLeft);
+			alignMgr.Refresh(ascDecMgr, sc);
+			ascDecMgr.Refresh(lcdRight, alignMgr, sc);
+			cargoMgr.Refresh(lcdLeft);
 
-				alignMgr.Active = alignActive;
-				cargoMgr.Active = cargoActive;
-			//} else {
-			//	alignMgr = null;
-			//	ascDecMgr = null;
-			//	cargoMgr = null;
-			//	yieldMgr = null;
-			//}
+			alignMgr.Active = alignActive;
+			cargoMgr.Active = cargoActive;
 
 			engineMgr = engineMgr ?? new EngineModule(this);
 			engineMgr.Refresh(Me, sc);
@@ -191,28 +172,6 @@ namespace IngameScript {
 			menuMgr = menuMgr ?? new MenuManager(this);
 			BuildMenu();
 		}
-
-		//void InitTimerBlock(string tbName) {
-		//	// Try locating a timer-block that also contain the word(s)
-		//	timerBlock = null;
-		//	triggerNow = null;
-		//	int cnt = 0;
-		//	ActionOnBlocksOfType<IMyTimerBlock>(this, Me, b=>{
-		//		if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,MultiMix_IgnoreBlocks)) {
-		//			ToType(b, ref timerBlock);
-		//			cnt++;
-		//		}
-		//	});
-		//	if (null == timerBlock) {
-		//		Echo($"WARNING: TimerBlock for PB not found. Name should contain '{tbName}' and block must be enabled.");
-		//		return;
-		//	}
-		//	if (1 != cnt)
-		//		throw new Exception($"More than a required just one TimerBlock found, where '{tbName}' is contained in their names.");
-
-		//	timerBlock.TriggerDelay = 1;
-		//	triggerNow = timerBlock.GetActionWithName("TriggerNow");
-		//}
 
 		bool ProgramCommand(string cmd) {
 			switch (cmd.ToUpper()) {
@@ -254,7 +213,6 @@ namespace IngameScript {
 
 		void BuildMenu() {
 			menuMgr.Clear();
-			//menuMgr.WarningText = null==timerBlock ? "\n TimerBlock missing. Some features unavailable!" : "";
 
 			//
 			alignMgr?.AddMenu(menuMgr);
