@@ -35,14 +35,16 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "3.7.4"; // 2017-09-20
+		const string scriptVersion = "4.0.0"; // 2017-11-17
 
-		Program() { }
+		Program() {
+			Runtime.UpdateFrequency = UpdateFrequency.Update100;
+		}
 		void Save() { }
 
 		StringBuilder profiler = null;
 
-		void Main(string args) {
+		void Main(string args, UpdateType updateSource) {
 			if (null!=profiler) {
 				profiler.Append($";{Runtime.LastRunTimeMs:F3}\n{DateTime.Now.Ticks};{Runtime.TimeSinceLastRun.Ticks}");
 				if (99900 < profiler.Length) { args="PROFILER"; } // Force-Stop the profiler!
@@ -86,8 +88,8 @@ namespace IngameScript {
 		OutputPanel lcdLeft = new OutputPanel();
 		OutputPanel lcdCenter = new OutputPanel();
 		OutputPanel lcdRight = new OutputPanel();
-		IMyTimerBlock timerBlock = null;
-		ITerminalAction triggerNow = null;
+		//IMyTimerBlock timerBlock = null;
+		//ITerminalAction triggerNow = null;
 
 		void Main1(string args) {
 			bool fastTrigger = false;
@@ -99,6 +101,13 @@ namespace IngameScript {
 				totalTicks += Runtime.TimeSinceLastRun.Ticks;
 
 				bool updateMenu = menuUpdateTick < totalTicks;
+				if (0 == args.Length) {
+					var sc = GetShipController();
+					if (null != sc && !sc.ControlThrusters) {
+						fastTrigger = true;
+						args = MoveIndicator2Command(sc.MoveIndicator);
+					}
+				}
 				if (0 < args.Length)
 					updateMenu |= ProgramCommand(args);
 
@@ -112,14 +121,18 @@ namespace IngameScript {
 					menuMgr.DrawMenu(lcdCenter);
 				}
 			}
-			if (null != timerBlock) {
-				//if (!timerBlock.StillExist()) { return; } // Failure!
-				// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
-				if (fastTrigger)
-					triggerNow.Apply(timerBlock);
-				else
-					timerBlock.ApplyAction("Start");
+			//if (null != timerBlock) {
+			//	//if (!timerBlock.StillExist()) { return; } // Failure!
+			//	// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
+			//	if (fastTrigger)
+			//		triggerNow.Apply(timerBlock);
+			//	else
+			//		timerBlock.ApplyAction("Start");
+			//}
+			if ((Runtime.UpdateFrequency & UpdateFrequency.Update1) != (fastTrigger ? UpdateFrequency.Update1 : 0)) {
+				Runtime.UpdateFrequency = UpdateFrequency.Update100 | (fastTrigger ? UpdateFrequency.Update1 : 0);
 			}
+
 			lastRunSuccess = true;
 		}
 
@@ -127,7 +140,7 @@ namespace IngameScript {
 			if (!NameContains(Me, MultiMix_UsedBlocks))
 				throw new Exception($"Programmable block does not have '{MultiMix_UsedBlocks}' in its custom-name.\nDid you read the instructions?");
 
-			InitTimerBlock(MultiMix_UsedBlocks);
+			//InitTimerBlock(MultiMix_UsedBlocks);
 
 			lcdLeft.Clear();
 			lcdCenter.Clear();
@@ -147,7 +160,7 @@ namespace IngameScript {
 
 			var sc = GetShipController(MultiMix_UsedBlocks, true);
 
-			if (null != timerBlock) {
+			//if (null != timerBlock) {
 				bool alignActive = alignMgr?.Active ?? false;
 				bool cargoActive = cargoMgr?.Active ?? true;
 
@@ -162,12 +175,12 @@ namespace IngameScript {
 
 				alignMgr.Active = alignActive;
 				cargoMgr.Active = cargoActive;
-			} else {
-				alignMgr = null;
-				ascDecMgr = null;
-				cargoMgr = null;
-				yieldMgr = null;
-			}
+			//} else {
+			//	alignMgr = null;
+			//	ascDecMgr = null;
+			//	cargoMgr = null;
+			//	yieldMgr = null;
+			//}
 
 			engineMgr = engineMgr ?? new EngineModule(this);
 			engineMgr.Refresh(Me, sc);
@@ -179,27 +192,27 @@ namespace IngameScript {
 			BuildMenu();
 		}
 
-		void InitTimerBlock(string tbName) {
-			// Try locating a timer-block that also contain the word(s)
-			timerBlock = null;
-			triggerNow = null;
-			int cnt = 0;
-			ActionOnBlocksOfType<IMyTimerBlock>(this, Me, b=>{
-				if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,MultiMix_IgnoreBlocks)) {
-					ToType(b, ref timerBlock);
-					cnt++;
-				}
-			});
-			if (null == timerBlock) {
-				Echo($"WARNING: TimerBlock for PB not found. Name should contain '{tbName}' and block must be enabled.");
-				return;
-			}
-			if (1 != cnt)
-				throw new Exception($"More than a required just one TimerBlock found, where '{tbName}' is contained in their names.");
+		//void InitTimerBlock(string tbName) {
+		//	// Try locating a timer-block that also contain the word(s)
+		//	timerBlock = null;
+		//	triggerNow = null;
+		//	int cnt = 0;
+		//	ActionOnBlocksOfType<IMyTimerBlock>(this, Me, b=>{
+		//		if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,MultiMix_IgnoreBlocks)) {
+		//			ToType(b, ref timerBlock);
+		//			cnt++;
+		//		}
+		//	});
+		//	if (null == timerBlock) {
+		//		Echo($"WARNING: TimerBlock for PB not found. Name should contain '{tbName}' and block must be enabled.");
+		//		return;
+		//	}
+		//	if (1 != cnt)
+		//		throw new Exception($"More than a required just one TimerBlock found, where '{tbName}' is contained in their names.");
 
-			timerBlock.TriggerDelay = 1;
-			triggerNow = timerBlock.GetActionWithName("TriggerNow");
-		}
+		//	timerBlock.TriggerDelay = 1;
+		//	triggerNow = timerBlock.GetActionWithName("TriggerNow");
+		//}
 
 		bool ProgramCommand(string cmd) {
 			switch (cmd.ToUpper()) {
@@ -214,6 +227,14 @@ namespace IngameScript {
 				sb.Append("\n======");
 				Echo(sb.ToString());
 				return true;
+			case "TOGGLECONTROL":
+				var sc = GetShipController();
+				if (null != sc) {
+					foreach(IMyGyro g in GetBlocksOfType(this,"gyro",Me))
+						SetGyro(g,1,sc.ControlThrusters);
+					sc.ControlThrusters = !sc.ControlThrusters;
+				}
+				return false;
 			case "PROFILER":
 				if (null == profiler) {
 					profiler = new StringBuilder();
@@ -233,7 +254,7 @@ namespace IngameScript {
 
 		void BuildMenu() {
 			menuMgr.Clear();
-			menuMgr.WarningText = null==timerBlock ? "\n TimerBlock missing. Some features unavailable!" : "";
+			//menuMgr.WarningText = null==timerBlock ? "\n TimerBlock missing. Some features unavailable!" : "";
 
 			//
 			alignMgr?.AddMenu(menuMgr);
@@ -281,7 +302,7 @@ namespace IngameScript {
 
 		//---------------
 
-		private IMyTerminalBlock shipCtrl = null;
+		private IMyShipController shipCtrl = null;
 		IMyShipController GetShipController(string primaryName = null, bool reset = false) {
 			if (null == shipCtrl || reset) {
 				shipCtrl = null;
@@ -290,13 +311,13 @@ namespace IngameScript {
 					if (!b.IsWorking || !SameGrid(b, Me))
 						return false;
 					if (null != primaryName && NameContains(b, primaryName))
-						shipCtrl = b;
+						shipCtrl = b as IMyShipController;
 					return (b as IMyShipController).ControlThrusters;
 				});
 				if (null == shipCtrl && 0 < lst.Count)
-					shipCtrl = lst[0];
+					shipCtrl = lst[0] as IMyShipController;
 			}
-			return shipCtrl as IMyShipController;
+			return shipCtrl;
 		}
 
 		//---------------
@@ -315,7 +336,7 @@ namespace IngameScript {
 			var lst = new List<IMyTerminalBlock>();
 
 			bool isLocked = false;
-			foreach(var b in GetBlocksOfType(lst,this,"connector",Me))
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true))
 				if (MyShipConnectorStatus.Connected == (b as IMyShipConnector).Status)
 					isLocked = true;
 			if (!isLocked) {
@@ -344,11 +365,11 @@ namespace IngameScript {
 
 			foreach(var b in GetBlocksOfType(lst,this,"landinggear",Me))
 				(b as IMyLandingGear).Unlock();
-			foreach(var b in GetBlocksOfType(lst,this,"connector",Me))
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true))
 				(b as IMyShipConnector).Disconnect();
 			yield return 100;
 
-			SetEnabled(GetBlocksOfType(lst,this,"connector",Me),false);
+			SetEnabled(GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true),false);
 			SetEnabled(GetBlocksOfType(lst,this,"weapons",Me),true);
 			ConnectorUnlockInfo="Successful unlock";
 			yield return 5000;
@@ -366,7 +387,7 @@ namespace IngameScript {
 			var lst = new List<IMyTerminalBlock>();
 
 			bool isUnlocked = true;
-			foreach(var b in GetBlocksOfType(lst,this,"connector",Me))
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true))
 				if (MyShipConnectorStatus.Connected == (b as IMyShipConnector).Status)
 					isUnlocked = false;
 			if (!isUnlocked) {
@@ -378,7 +399,7 @@ namespace IngameScript {
 			ConnectorLockInfo="Attempting lock";
 			yield return 10;
 
-			foreach(var b in GetBlocksOfType(lst,this,"connector",Me)) {
+			foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true)) {
 				var c = b as IMyShipConnector;
 				c.PullStrength = 0.0001f;
 				c.Enabled = true;
@@ -389,7 +410,7 @@ namespace IngameScript {
 			bool isLocked = false;
 			do {
 				ConnectorLockInfo=$"Attempting ({maxAttempts})";
-				foreach(var b in GetBlocksOfType(lst,this,"connector",Me)) {
+				foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true)) {
 					var c = b as IMyShipConnector;
 					if (MyShipConnectorStatus.Connected == c.Status)
 						isLocked = true;
@@ -421,5 +442,58 @@ namespace IngameScript {
 
 			ConnectorLockInfo="";
 		}
+
+		private readonly string[] miCmd = {"LEFT","","RIGHT","UP","","DOWN","BACK","","ENTER"};
+		private bool keysReleased = true;
+		string MoveIndicator2Command(Vector3 mi) {
+			var cmd=miCmd[1 + Math.Sign(mi.X)]+
+					miCmd[4 + Math.Sign(mi.Z)]+
+					miCmd[7 + Math.Sign(mi.Y)];
+			if (cmd.Length == 0) {
+				keysReleased = true;
+			} else if (!keysReleased) {
+				return "";
+			} else {
+				keysReleased = false;
+			}
+			return cmd;
+		}
+
+
+/*
+		// Reference: https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/indexers/using-indexers
+		class DRAW_type {
+			private char[] array1D;
+			private int sizeX;
+			private int sizeY;
+			public DRAW_type(int _sizeX,int _sizeY) {
+				sizeX = _sizeX;
+				sizeY = _sizeY;
+				array1D = new char[sizeX * sizeY];
+			}
+			public char this[int x, int y] {
+				get { return array1D[y * sizeX + x]; }
+				set { array1D[y * sizeX + x] = value; }
+			}
+			public override String ToString() {
+				return new String(array1D);
+			}
+		}
+
+		// Allocate
+		DRAW_type DRAW = new DRAW_type(101,100);
+
+		// Usage example
+		void Method() {
+			// Assignment
+			DRAW[0,0] = 'A';
+			// Compare
+			if (DRAW[4,2] == 'X') {
+				// ...
+			}
+			// Retrieve as `string`.
+			String VISUALDATA = DRAW.ToString();
+		}
+*/
  	}
 }

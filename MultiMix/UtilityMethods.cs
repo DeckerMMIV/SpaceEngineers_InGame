@@ -32,8 +32,8 @@ namespace IngameScript {
 			return AppendPctBar(sb, txt, pct, 70, nl);
 		}
 		public static StringBuilder AppendPctBar(StringBuilder sb, string txt, double pct, int barLen = 70, bool nl = true, bool center = false) {
-			const char SPC = '\u02D9'; // '\'';
-			const char FIL = '!'; // '|';
+			const char SPC = '∙';
+			const char FIL = 'I';
 			int fil = Math.Min(barLen, (int)(Math.Max(0.0, Math.Abs(pct)) * barLen));
 			sb.Append(txt).Append("[");
 			if (center) {
@@ -83,8 +83,8 @@ namespace IngameScript {
 			return null != (o = i as T);
 		}
 
-		public static void SetGyro(IMyGyro g, float power = 1, bool active = false, float p = 0, float y = 0, float r = 0) {
-			g.GyroOverride = active;
+		public static void SetGyro(IMyGyro g, float power = 1, bool overrule = false, float p = 0, float y = 0, float r = 0) {
+			g.GyroOverride = overrule;
 			g.Pitch = p;
 			g.Yaw = y;
 			g.Roll = r;

@@ -24,18 +24,21 @@ namespace IngameScript {
 		// Blocks with this in their custom-name, will not be used.
 		const string DoorsAutoClose_IgnoreBlocks = "IGNORE";
 
+		// How many seconds must pass, before a detected open door should be closed
+		const int DoorsAutoClose_SecondsToKeepOpen = 3;
 
 
 
 
 		// -- Program ------------------------------------------------
 		public Program() {
+			Runtime.UpdateFrequency = UpdateFrequency.Update100;
 		}
 
 		public void Save() {
 		}
 
-		public void Main(string args) {
+		public void Main(string args, UpdateType updateSource) {
 			if (null!=profiler) {
 				profiler.Append($";{Runtime.LastRunTimeMs:F3}\n{DateTime.Now.Ticks};{Runtime.TimeSinceLastRun.Ticks}");
 				if (99900 < profiler.Length) { args="PROFILER"; } // Force-Stop the profiler!
@@ -63,12 +66,15 @@ namespace IngameScript {
 
 				fastTrigger |= Tick(yieldMgr);
 			}
-			if (null != timerBlock) {
-				// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
-				if (fastTrigger)
-					triggerNow.Apply(timerBlock);
-				else
-					timerBlock.ApplyAction("Start");
+			//if (null != timerBlock) {
+			//	// This is why timer-block should be configured to ONLY execute PB and NOTHING ELSE!
+			//	if (fastTrigger)
+			//		triggerNow.Apply(timerBlock);
+			//	else
+			//		timerBlock.ApplyAction("Start");
+			//}
+			if ((Runtime.UpdateFrequency & UpdateFrequency.Update10) != (fastTrigger ? UpdateFrequency.Update10 : 0)) {
+				Runtime.UpdateFrequency = UpdateFrequency.Update100 | (fastTrigger ? UpdateFrequency.Update10 : 0);
 			}
 			lastRunSuccess = true;
 		}
@@ -80,36 +86,36 @@ namespace IngameScript {
 			if (!NameContains(Me, DoorsAutoClose_UsedBlocks))
 				throw new Exception($"Programmable block does not have '{DoorsAutoClose_UsedBlocks}' in its custom-name.\nDid you read the instructions?");
 
-			InitTimerBlock(DoorsAutoClose_UsedBlocks);
+			//InitTimerBlock(DoorsAutoClose_UsedBlocks);
 
 			yieldMgr = yieldMgr ?? new YieldModule(this);
 
 			yieldMgr.Add(DoorCloserLooper());
 		}
 
-		IMyTimerBlock timerBlock = null;
-		ITerminalAction triggerNow = null;
-		void InitTimerBlock(string tbName) {
-			// Try locating a timer-block that also contain the word(s)
-			timerBlock = null;
-			triggerNow = null;
-			int cnt = 0;
-			ActionOnBlocksOfType<IMyTimerBlock>(this, Me, b=>{
-				if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,DoorsAutoClose_IgnoreBlocks)) {
-					ToType(b, ref timerBlock);
-					cnt++;
-				}
-			});
-			if (null == timerBlock) {
-				Echo($"WARNING: TimerBlock for PB not found. Name should contain '{tbName}' and block must be enabled.");
-				return;
-			}
-			if (1 != cnt)
-				throw new Exception($"More than a required just one TimerBlock found, where '{tbName}' is contained in their names.");
+		//IMyTimerBlock timerBlock = null;
+		//ITerminalAction triggerNow = null;
+		//void InitTimerBlock(string tbName) {
+		//	// Try locating a timer-block that also contain the word(s)
+		//	timerBlock = null;
+		//	triggerNow = null;
+		//	int cnt = 0;
+		//	ActionOnBlocksOfType<IMyTimerBlock>(this, Me, b=>{
+		//		if (b.IsWorking && NameContains(b, tbName) && !NameContains(b,DoorsAutoClose_IgnoreBlocks)) {
+		//			ToType(b, ref timerBlock);
+		//			cnt++;
+		//		}
+		//	});
+		//	if (null == timerBlock) {
+		//		Echo($"WARNING: TimerBlock for PB not found. Name should contain '{tbName}' and block must be enabled.");
+		//		return;
+		//	}
+		//	if (1 != cnt)
+		//		throw new Exception($"More than a required just one TimerBlock found, where '{tbName}' is contained in their names.");
 
-			timerBlock.TriggerDelay = 1;
-			triggerNow = timerBlock.GetActionWithName("TriggerNow");
-		}
+		//	timerBlock.TriggerDelay = 1;
+		//	triggerNow = timerBlock.GetActionWithName("TriggerNow");
+		//}
 
 		//--------------
 
@@ -128,16 +134,19 @@ namespace IngameScript {
 				GridTerminalSystem.GetBlocksOfType(newDoors, x=>SameGrid(x,Me) & !NameContains(x,DoorsAutoClose_IgnoreBlocks));
 
 				long nowTick = DateTime.Now.Ticks;
-				long closeAtTick = nowTick + TimeSpan.TicksPerSecond * 3;
+				long closeAtTick = nowTick + TimeSpan.TicksPerSecond * DoorsAutoClose_SecondsToKeepOpen;
 
 				foreach(var d in newDoors) {
-					if (d is IMyAirtightHangarDoor)
+					if (d is IMyAirtightHangarDoor || !d.IsWorking)
 						continue;
 
-					if (d.IsWorking && 2 > (int)d.Status) {
+					switch(d.Status) {
+					case DoorStatus.Open:
+					case DoorStatus.Opening:
 						if (!openDoors.ContainsKey(d.EntityId)) {
 							openDoors.Add(d.EntityId, closeAtTick);
 						}
+						break;
 					}
 				}
 				newDoors.Clear();

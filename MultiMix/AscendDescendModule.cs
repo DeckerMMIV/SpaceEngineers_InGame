@@ -232,10 +232,14 @@ namespace IngameScript {
 				displayUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/10;
 
 				sb1.Append('\u2022',7).Append($" Status Display ").Append('\u2022',7).Append(DateTime.Now.ToString(" HH\\:mm\\:ss\\.fff"));
+if (!sc.ControlThrusters)
+	sb1.Append("\n")
+		.Append(sc.MoveIndicator.ToString()).Append(Pgm.MoveIndicator2Command(sc.MoveIndicator))
+		.Append(sc.RollIndicator.ToString());
 				sb1.Append($"\n Mode: {OperationMode} \u2022 State: {curState}");
 				sb1.Append("\n Alignment: ").Append((align.Active ? "Enabled" : "Off")).Append(" \u2022 AlignMode: ").Append(align.RocketMode ? "Rocket" : "Ship").Append(align.Inverted ? " (Inverted)" : "");
 				string alti = (double.IsNaN(altitudeSurface) ? "---" : $"{altitudeSurface:F1}");
-				string altiDiff = ((double.IsNaN(altitudeDiff) || Math.Abs(altitudeDiff) < 1) ? "" : ((altitudeDiff > 0) ? " /\u201c\\" : " \\\u201e/"));
+				string altiDiff = ((double.IsNaN(altitudeDiff) || Math.Abs(altitudeDiff) < 1) ? "" : ((altitudeDiff > 0) ? " " : " "));
 				sb1.Append($"\n Altitude: {alti} m{altiDiff} \u2022 Gravity: {gravity:F3} g");
 				sb1.Append($"\n Spd: {currSpeed:F2} m/s \u2022 Acc.: {currAccl:F2} \u2022 Atm.: {atmosphereDensity:F1}");
 				if (Mode.Descend == mode) {
