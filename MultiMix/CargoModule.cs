@@ -277,7 +277,7 @@ namespace IngameScript {
 				inventories.Clear();
 
 				if (update)
-					GatherBlocks(Pgm, pipeline);
+					GatherBlocks(Pgm, pipeline.GetInternalArray());
 			}
 
 			bool ejectorsEnabled = true;

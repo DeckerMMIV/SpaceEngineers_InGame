@@ -51,10 +51,10 @@ namespace IngameScript {
 				gyros.Clear();
 
 				IMyGyro g = null;
-				GatherBlocks(Pgm, new List<Func<IMyTerminalBlock, bool>> {
-					(b) => SameGrid(b,Me) && !NameContains(b,MultiMix_IgnoreBlocks),
-					(b) => { if (ToType(b, ref g) && g.IsWorking) { gyros.Add(g); return false; } return true; },
-				});
+				GatherBlocks(Pgm 
+					,(b) => SameGrid(b,Me) && !NameContains(b,MultiMix_IgnoreBlocks)
+					,(b) => { if (ToType(b, ref g) && g.IsWorking) { gyros.Add(g); return false; } return true; }
+				);
 
 				maxYaw = (0 < gyros.Count ? gyros[0].GetMaximum<float>("Yaw") : 0);
 			}
@@ -125,7 +125,7 @@ namespace IngameScript {
 				int thisInstance = ++instanceNum;
 				isActive = true;
 				while (isActive && thisInstance == instanceNum) {
-					yield return AdjustGyros() ? 10 : 1000;
+					yield return AdjustGyros() ? 1 : 500;
 				}
 			}
 

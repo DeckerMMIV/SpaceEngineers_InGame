@@ -25,20 +25,24 @@ namespace IngameScript {
 				Execute(method.GetEnumerator());
 			}
 
-			override public bool Tick() {
+			override public UpdateFrequency Tick() {
 				if (0 < pending.Count) {
 					var p = pending.First();
-					if (p.Key < Pgm.totalTicks) {
+					if (p.Key <= Pgm.totalTicks) {
 						pending.RemoveAt(0);
 						Execute(p.Value);
-						//
-						if (0 < pending.Count)
-							if (pending.First().Key < Pgm.totalTicks + TimeSpan.TicksPerSecond)
-								return true; // FastTrigger needed
-					} else if (p.Key < Pgm.totalTicks + TimeSpan.TicksPerSecond)
-						return true; // FastTrigger needed
+						if (0 == pending.Count)
+							return UpdateFrequency.Update100;
+						p = pending.First();
+					}
+					if (p.Key <= Pgm.totalTicks + (TimeSpan.TicksPerSecond / 60)) {
+						return UpdateFrequency.Update1;
+					}
+					if (p.Key <= Pgm.totalTicks + (TimeSpan.TicksPerSecond / 6)) {
+						return UpdateFrequency.Update10;
+					}
 				}
-				return false;
+				return UpdateFrequency.Update100;
 			}
 
 			private void Execute(IEnumerator<int> iter) {
@@ -53,7 +57,7 @@ namespace IngameScript {
 				}
 			}
 
-			SortedList<long,IEnumerator<int>> pending = new SortedList<long,IEnumerator<int>>();
+			private SortedList<long,IEnumerator<int>> pending = new SortedList<long,IEnumerator<int>>();
 		}
 	}
 }

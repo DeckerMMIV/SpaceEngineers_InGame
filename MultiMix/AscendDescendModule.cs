@@ -46,30 +46,32 @@ namespace IngameScript {
 			}
 
 			int execCount;
-			long nextTick;
+			long nextTick = 0;
 			IEnumerator<int> stateMachine = null;
-			override public bool Tick() {
+			override public UpdateFrequency Tick() {
+				var remainTickSpan = nextTick - Pgm.totalTicks;
 				if (null != stateMachine) {
-					if (nextTick < Pgm.totalTicks) {
+					if (remainTickSpan <= 0) {
 						if (stateMachine.MoveNext()) {
-							int i = stateMachine.Current;
-							nextTick = Pgm.totalTicks + TimeSpan.FromMilliseconds(i).Ticks;
-							StatusDisplay();
-							return i<1000;
+							nextTick = Pgm.totalTicks + TimeSpan.FromMilliseconds(remainTickSpan = stateMachine.Current).Ticks;
+						} else {
+							remainTickSpan = TimeSpan.TicksPerSecond/2;
+							SetRunState(false);
 						}
-						SetRunState(false);
 						StatusDisplay();
 					}
-					return true;
-				}
-				if (nextTick < Pgm.totalTicks) {
-					nextTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/2;
+				} else if (remainTickSpan <= 0) {
+					nextTick = Pgm.totalTicks + (remainTickSpan = TimeSpan.TicksPerSecond/2);
 					UpdateTelemetry();
 					ThrustStatus();
 					StatusDisplay();
 					execCount++;
 				}
-				return false;
+				if (remainTickSpan < TimeSpan.TicksPerSecond / 6)
+					return UpdateFrequency.Update1;
+				if (remainTickSpan < TimeSpan.TicksPerSecond)
+					return UpdateFrequency.Update10;
+				return UpdateFrequency.Update100;
 			}
 
 			IMyShipController sc = null;
@@ -99,13 +101,13 @@ namespace IngameScript {
 				IMyBatteryBlock y = null;
 				IMyCameraBlock c = null;
 				IMyParachute p = null;
-				GatherBlocks(Pgm, new List<Func<IMyTerminalBlock, bool>> {
-					b => SameGrid(b,Me) && !NameContains(b,MultiMix_IgnoreBlocks),
-					b => { if (ToType(b, ref h) && h.IsWorking && SubtypeContains(h,"Hydrogen")) { hydrogenTanks.Add(h); return false; } return true; },
-					b => { if (ToType(b, ref y) && y.IsWorking) { batteries.Add(y); return false; } return true; },
-					b => { if (ToType(b, ref c) && c.IsWorking && NameContains(c,"Down")) { downCamera = c; c.EnableRaycast = true; return false; } return true; },
-					b => { if (ToType(b, ref p) && p.IsWorking) { parachute=p; return false; } return true; },
-				});
+				GatherBlocks(Pgm
+					,b => SameGrid(b,Me) && !NameContains(b,MultiMix_IgnoreBlocks)
+					,b => { if (ToType(b, ref h) && h.IsWorking && SubtypeContains(h,"Hydrogen")) { hydrogenTanks.Add(h); return false; } return true; }
+					,b => { if (ToType(b, ref y) && y.IsWorking) { batteries.Add(y); return false; } return true; }
+					,b => { if (ToType(b, ref c) && c.IsWorking && NameContains(c,"Down")) { downCamera = c; c.EnableRaycast = true; return false; } return true; }
+					,b => { if (ToType(b, ref p) && p.IsWorking) { parachute=p; return false; } return true; }
+				);
 
 				if (null == stateMachine)
 					SetRunState(false);
@@ -219,6 +221,7 @@ namespace IngameScript {
 			long hydroTanksUpdateTick = 0;
 			double hydroTanksPctFilled = 0;
 			int hydroTanksGiving = 0;
+			double hydroTanksFillLevel = 0;
 
 			long batteriesUpdateTick = 0;
 			float battStoredPower = 0, battMaxPower = 0;
@@ -229,7 +232,7 @@ namespace IngameScript {
 			void StatusDisplay() {
 				if (null == lcd || displayUpdateTick > Pgm.totalTicks)
 					return;
-				displayUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/10;
+				displayUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/6;
 
 				sb1.Append('\u2022',7).Append($" Status Display ").Append('\u2022',7).Append(DateTime.Now.ToString(" HH\\:mm\\:ss\\.fff"));
 
@@ -258,9 +261,11 @@ if (!sc.ControlThrusters)
 					if (hydroTanksUpdateTick < Pgm.totalTicks) {
 						hydroTanksUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/3;
 						hydroTanksPctFilled = 0;
+						hydroTanksFillLevel = 0;
 						hydroTanksGiving = 0;
 						foreach(var h in hydrogenTanks) {
 							if (h.IsWorking && !h.Stockpile) {
+								hydroTanksFillLevel += h.Capacity * h.FilledRatio;
 								hydroTanksPctFilled += h.FilledRatio;
 								hydroTanksGiving++;
 							} 

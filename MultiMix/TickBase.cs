@@ -25,16 +25,16 @@ namespace IngameScript {
 		}
 
 		//-------------
-		bool Tick(TickBase obj) {
+		UpdateFrequency Tick(TickBase obj) {
 			if (null != obj && obj.Active)
 				return obj.Tick();
-			return false;
+			return UpdateFrequency.None;
 		}
 
 		abstract class TickBase : ModuleBase {
 			public TickBase(Program p) : base(p) {}
 			public bool Active { get; set; } = true;
-			abstract public bool Tick(); // returns; false = use SlowTrigger, true = use FastTrigger
+			abstract public UpdateFrequency Tick(); // returns; false = use SlowTrigger, true = use FastTrigger
 		}
 	}
 }

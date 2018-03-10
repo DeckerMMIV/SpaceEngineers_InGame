@@ -31,16 +31,9 @@ namespace IngameScript {
 
 		//------
 
-		public static void ActionOnBlocksOfType<T>(Program pgm, Action<T> act) where T : class, IMyTerminalBlock {
-			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => {
-				act(b as T);
-				return false;
-			});
-		}
-
 		public static void ActionOnBlocksOfType<T>(Program pgm, IMyTerminalBlock gridRef, Action<T> act) where T : class, IMyTerminalBlock {
 			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => {
-				if (SameGrid(gridRef,b))
+				if (null==gridRef || SameGrid(gridRef,b))
 					act(b as T);
 				return false;
 			});
@@ -48,7 +41,7 @@ namespace IngameScript {
 
 		//------
 
-		public static void GatherBlocks(Program pgm, List<Func<IMyTerminalBlock, bool>> pipeline) {
+		public static void GatherBlocks(Program pgm, params Func<IMyTerminalBlock, bool>[] pipeline) {
 			pgm.GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(null, b => {
 				// Iterate through pipeline, until a segment returns `false`
 				foreach (var f in pipeline)

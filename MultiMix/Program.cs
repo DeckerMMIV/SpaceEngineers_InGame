@@ -35,7 +35,7 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "4.1.0"; // 2018-03-03
+		const string scriptVersion = "4.2.0"; // 2018-03-10
 
 		Program() {
 			Runtime.UpdateFrequency = UpdateFrequency.Update100;
@@ -90,10 +90,10 @@ namespace IngameScript {
 		OutputPanel lcdRight = new OutputPanel();
 
 		void Main1(string args) {
-			bool fastTrigger = false;
+			UpdateFrequency nextUpdFreq = UpdateFrequency.None;
 			if (!lastRunSuccess) {
 				Init();
-				fastTrigger = true;
+				nextUpdFreq |= UpdateFrequency.Update1;
 			} else {
 				lastRunSuccess = false;
 				totalTicks += Runtime.TimeSinceLastRun.Ticks;
@@ -102,27 +102,22 @@ namespace IngameScript {
 				if (0 == args.Length) {
 					var sc = GetShipController();
 					if (null != sc && !sc.ControlThrusters) {
-						fastTrigger = true;
+						nextUpdFreq |= UpdateFrequency.Update1;
 						args = MoveIndicator2Command(sc.MoveIndicator);
 					}
 				}
 				if (0 < args.Length)
 					updateMenu |= ProgramCommand(args);
 
-				//
-				fastTrigger |= Tick(ascDecMgr);
-				fastTrigger |= Tick(yieldMgr);
+				nextUpdFreq |= Tick(ascDecMgr);
+				nextUpdFreq |= Tick(yieldMgr);
 
-				//
 				if (updateMenu) {
 					menuUpdateTick = totalTicks + TimeSpan.TicksPerSecond;
 					menuMgr.DrawMenu(lcdCenter);
 				}
 			}
-			if ((Runtime.UpdateFrequency & UpdateFrequency.Update1) != (fastTrigger ? UpdateFrequency.Update1 : 0)) {
-				Runtime.UpdateFrequency = UpdateFrequency.Update100 | (fastTrigger ? UpdateFrequency.Update1 : 0);
-			}
-
+			Runtime.UpdateFrequency = nextUpdFreq;
 			lastRunSuccess = true;
 		}
 
