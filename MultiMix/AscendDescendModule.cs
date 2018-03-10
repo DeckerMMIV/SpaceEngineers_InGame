@@ -55,13 +55,13 @@ namespace IngameScript {
 						if (stateMachine.MoveNext()) {
 							nextTick = Pgm.totalTicks + TimeSpan.FromMilliseconds(remainTickSpan = stateMachine.Current).Ticks;
 						} else {
-							remainTickSpan = TimeSpan.TicksPerSecond/2;
+							remainTickSpan = TimeSpan.TicksPerSecond;
 							SetRunState(false);
 						}
 						StatusDisplay();
 					}
 				} else if (remainTickSpan <= 0) {
-					nextTick = Pgm.totalTicks + (remainTickSpan = TimeSpan.TicksPerSecond/2);
+					nextTick = Pgm.totalTicks + (remainTickSpan = TimeSpan.TicksPerSecond);
 					UpdateTelemetry();
 					ThrustStatus();
 					StatusDisplay();
