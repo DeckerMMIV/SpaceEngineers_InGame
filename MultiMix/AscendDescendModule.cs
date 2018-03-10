@@ -217,7 +217,7 @@ namespace IngameScript {
 			readonly string[] chargeAnim={"      ","  <<"," << ","<<  "};
 
 			long hydroTanksUpdateTick = 0;
-			float hydroTanksPctFilled = 0;
+			double hydroTanksPctFilled = 0;
 			int hydroTanksGiving = 0;
 
 			long batteriesUpdateTick = 0;
@@ -232,10 +232,12 @@ namespace IngameScript {
 				displayUpdateTick = Pgm.totalTicks + TimeSpan.TicksPerSecond/10;
 
 				sb1.Append('\u2022',7).Append($" Status Display ").Append('\u2022',7).Append(DateTime.Now.ToString(" HH\\:mm\\:ss\\.fff"));
+
 if (!sc.ControlThrusters)
 	sb1.Append("\n")
 		.Append(sc.MoveIndicator.ToString()).Append(Pgm.MoveIndicator2Command(sc.MoveIndicator))
 		.Append(sc.RollIndicator.ToString());
+
 				sb1.Append($"\n Mode: {OperationMode} \u2022 State: {curState}");
 				sb1.Append("\n Alignment: ").Append((align.Active ? "Enabled" : "Off")).Append(" \u2022 AlignMode: ").Append(align.RocketMode ? "Rocket" : "Ship").Append(align.Inverted ? " (Inverted)" : "");
 				string alti = (double.IsNaN(altitudeSurface) ? "---" : $"{altitudeSurface:F1}");
@@ -584,10 +586,9 @@ if (!sc.ControlThrusters)
 								remainThrustNeeded = Math.Max(0, remainThrustNeeded - (localThrustMax * pct));
 						}
 
-						float ovr = thrst.GetMaximum<float>("Override") * pct;
 						foreach(var t in thrsts) {
 							sumThrustCurEff += t.CurrentThrust;
-							t.SetValueFloat("Override", ovr);
+							t.ThrustOverridePercentage = pct;
 						}
 
 						AppendPctBar(sb2, "\n Thr:", pct, barLen, false);
@@ -603,7 +604,7 @@ if (!sc.ControlThrusters)
 					for (var thrType = thrPrio.Current.Value.GetEnumerator(); thrType.MoveNext();)
 						foreach(var t in thrType.Current.Value)
 							if (0 < t.ThrustOverride)
-								t.SetValueFloat("Override", 0);
+								t.ThrustOverridePercentage = 0;
 			}
 
 			public void ThrustStatus() {

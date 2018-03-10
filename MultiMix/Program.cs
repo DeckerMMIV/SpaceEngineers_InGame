@@ -35,7 +35,7 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "4.0.0"; // 2017-11-17
+		const string scriptVersion = "4.1.0"; // 2018-03-03
 
 		Program() {
 			Runtime.UpdateFrequency = UpdateFrequency.Update100;
@@ -266,7 +266,7 @@ namespace IngameScript {
 				shipCtrl = null;
 				var lst = new List<IMyShipController>();
 				GridTerminalSystem.GetBlocksOfType(lst, b => {
-					if (!b.IsWorking || !SameGrid(b, Me))
+					if (!b.CanControlShip || !b.IsWorking || !SameGrid(b, Me))
 						return false;
 					if (null != primaryName && NameContains(b, primaryName))
 						shipCtrl = b as IMyShipController;

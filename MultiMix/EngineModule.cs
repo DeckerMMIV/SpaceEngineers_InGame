@@ -77,7 +77,7 @@ namespace IngameScript {
 						if (0 != modifier && 0 < lst.Count) {
 							float current = 0;
 							foreach(var b in lst)
-								current += (b as IMyThrust).GetValueFloat("Override");
+								current += (b as IMyThrust).ThrustOverridePercentage;
 
 							if (100f == modifier)
 								modifier = 0 < current ? 0 : 1; // Toggle between 0% and 100% thrust

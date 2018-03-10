@@ -26,22 +26,22 @@ namespace IngameScript {
 		}
 
 		private static float ApplyThrustPct(List<IMyTerminalBlock> blks, float absPct, float diffPct) {
-			float sumMaxOverride = 0, sumNewOverride = 0, maxOverride, newOverride, pct;
-			Func<float, IMyThrust, float, float> calcThrust;
+			float sumMaxOverride = 0, sumNewOverride = 0, newOverride, pct;
+			Func<float, IMyThrust, float> calcThrust;
 			if (0 != diffPct) {
 				pct = MathHelper.Clamp(diffPct, -1, 1);
-				calcThrust = (pct2, t, maxT) => { return Math.Max(0, Math.Min(t.GetValueFloat("Override") + (maxT * pct2), maxT)); };
+				calcThrust = (pct2, t) => { return MathHelper.Clamp(t.ThrustOverridePercentage + pct2, 0, 1); };
 			} else if (0 <= absPct) {
 				pct = MathHelper.Clamp(absPct, 0, 1);
-				calcThrust = (pct2, t, maxT) => { return maxT * pct2; };
+				calcThrust = (pct2, t) => { return pct2; };
 			} else
 				return 0;
 
 			foreach(var b in blks) {
 				var t = b as IMyThrust;
 				if (null != t) {
-					t.SetValueFloat("Override", newOverride = calcThrust(pct, t, maxOverride = t.GetMaximum<float>("Override")));
-					sumMaxOverride += maxOverride;
+					t.ThrustOverridePercentage = (newOverride = calcThrust(pct, t));
+					sumMaxOverride += 1;
 					sumNewOverride += newOverride;
 				}
 			}

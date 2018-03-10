@@ -172,7 +172,7 @@ namespace IngameScript {
 					ang = rot.Length() + forceRotation; // Naive fix for "Gimbal lock"
 					ang = Math.Atan2(ang, Math.Sqrt(Math.Max(0.0, 1.0 - ang * ang))); //More numerically stable than: ang=Math.Asin(ang)
 
-					if (0.01 > ang) {
+					if (0.005 > ang) {
 						SetGyro(g);
 						continue;
 					}
