@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		public static float SetThrustAbsPct(List<IMyTerminalBlock> blks, float absPct) {
 			return ApplyThrustPct(blks, absPct, 0);
 		}
@@ -48,8 +47,6 @@ namespace IngameScript {
 			return 0 >= sumMaxOverride ? 0 : sumNewOverride / sumMaxOverride;
 		}
 
-		//-------
-
 		[Flags]
 		public enum ThrustFlags {
 			All = 0,
@@ -79,30 +76,30 @@ namespace IngameScript {
 			AllEngines = Ion | Hydrogen | Atmospheric,
 		}
 
-		public static List<IMyTerminalBlock> GetThrustBlocks(ThrustFlags flags, Program pgm, IMyTerminalBlock myGrid = null, IMyTerminalBlock dirRefBlk = null) {
-			return GetThrustBlocks(new List<IMyTerminalBlock>(), flags, pgm, myGrid, dirRefBlk);
+		public static List<IMyTerminalBlock> GetThrustBlocks(ThrustFlags flgs, Program pgm, IMyTerminalBlock myGrid = null, IMyTerminalBlock dirRefBlk = null) {
+			return GetThrustBlocks(new List<IMyTerminalBlock>(), flgs, pgm, myGrid, dirRefBlk);
 		}
 
-		public static List<IMyTerminalBlock> GetThrustBlocks(List<IMyTerminalBlock> lst, ThrustFlags flags, Program pgm, IMyTerminalBlock myGrid = null, IMyTerminalBlock dirRefBlk = null) {
+		public static List<IMyTerminalBlock> GetThrustBlocks(List<IMyTerminalBlock> lst, ThrustFlags flgs, Program pgm, IMyTerminalBlock myGrid = null, IMyTerminalBlock dirRefBlk = null) {
 			// Default return value is an empty list
 			lst.Clear();
 
-			ThrustFlags engineTypes = flags & ThrustFlags.AllEngines;
+			ThrustFlags engineTypes = flgs & ThrustFlags.AllEngines;
 			if (ThrustFlags.AllEngines == engineTypes)
 				// When 'all engine types', then use value zero
 				engineTypes = 0;
 
-			ThrustFlags engineSizes = flags & ThrustFlags.AllSizes;
+			ThrustFlags engineSizes = flgs & ThrustFlags.AllSizes;
 			if (ThrustFlags.AllSizes == engineSizes)
 				// When 'all engine sizes', then use value zero
 				engineSizes = 0;
 
-			ThrustFlags thrustDirections = flags & ThrustFlags.AllDirections;
-			if (ThrustFlags.AllDirections == thrustDirections)
+			ThrustFlags thrustDirs = flgs & ThrustFlags.AllDirections;
+			if (ThrustFlags.AllDirections == thrustDirs)
 				// When 'all thrust directions', then use value zero
-				thrustDirections = 0;
+				thrustDirs = 0;
 
-			if (0 < thrustDirections && null == dirRefBlk)
+			if (0 < thrustDirs && null == dirRefBlk)
 				// Requested specific thrust-direction(s), but missing a 'directionReferenceBlock' for orientation
 				return lst;
 
@@ -140,13 +137,13 @@ namespace IngameScript {
 					}
 				}
 
-				if (0 == thrustDirections)
+				if (0 == thrustDirs)
 					// All/any direction is requested
 					return true;
 
 				// Calculate direction of thrust-block according to supplied reference-block.
 				int blkDir = (int)dirRefBlk.Orientation.TransformDirectionInverse(thr.Orientation.TransformDirection(Base6Directions.Direction.Forward));
-				return 0 != ((int)thrustDirections & (1 << blkDir)); // Is direction accepted?
+				return 0 != ((int)thrustDirs & (1 << blkDir)); // Is direction accepted?
 			});
 
 			return lst;

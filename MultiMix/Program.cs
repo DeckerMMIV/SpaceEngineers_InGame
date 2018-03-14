@@ -35,7 +35,7 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "4.2.0"; // 2018-03-10
+		const string scriptVersion = "4.3.1"; // 2018-03-13
 
 		Program() {
 			Runtime.UpdateFrequency = UpdateFrequency.Update100;
@@ -128,6 +128,7 @@ namespace IngameScript {
 			lcdLeft.Clear();
 			lcdCenter.Clear();
 			lcdRight.Clear();
+			var lcdBearing = new OutputPanel();
 			ActionOnBlocksOfType<IMyTextPanel>(this, Me, p=>{
 				if (p.IsWorking && !NameContains(p, MultiMix_IgnoreBlocks))
 					if (NameContains(p, "Center"))
@@ -136,6 +137,8 @@ namespace IngameScript {
 						lcdLeft.Add(p);
 					else if (NameContains(p, "Right"))
 						lcdRight.Add(p);
+					else if (NameContains(p, "Bearing"))
+						lcdBearing.Add(p);
 			});
 			lcdLeft.ShowPublicText("Initializing: Left panel(s)");
 			lcdCenter.ShowPublicText("Initializing: Center panel(s)");
@@ -163,6 +166,10 @@ namespace IngameScript {
 
 			toolsMgr = toolsMgr ?? new ToolsModule(this);
 			toolsMgr.Refresh();
+
+			bearingMgr = bearingMgr ?? new Whip_Bearing(this);
+			bearingMgr.Refresh(lcdBearing, sc);
+			bearingMgr.Active = (lcdBearing.Count > 0);
 
 			menuMgr = menuMgr ?? new MenuManager(this);
 			BuildMenu();
@@ -411,42 +418,5 @@ namespace IngameScript {
 			}
 			return cmd;
 		}
-
-
-/*
-		// Reference: https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/indexers/using-indexers
-		class DRAW_type {
-			private char[] array1D;
-			private int sizeX;
-			private int sizeY;
-			public DRAW_type(int _sizeX,int _sizeY) {
-				sizeX = _sizeX;
-				sizeY = _sizeY;
-				array1D = new char[sizeX * sizeY];
-			}
-			public char this[int x, int y] {
-				get { return array1D[y * sizeX + x]; }
-				set { array1D[y * sizeX + x] = value; }
-			}
-			public override String ToString() {
-				return new String(array1D);
-			}
-		}
-
-		// Allocate
-		DRAW_type DRAW = new DRAW_type(101,100);
-
-		// Usage example
-		void Method() {
-			// Assignment
-			DRAW[0,0] = 'A';
-			// Compare
-			if (DRAW[4,2] == 'X') {
-				// ...
-			}
-			// Retrieve as `string`.
-			String VISUALDATA = DRAW.ToString();
-		}
-*/
  	}
 }

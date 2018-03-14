@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		public static string LabelOnOff(bool b, string pfx, string onTxt="ON", string offTxt="off", string sfx="") {
 			return b ? $"{pfx} {onTxt}/--{sfx}" : $"{pfx} --/{offTxt}{sfx}";
 		}

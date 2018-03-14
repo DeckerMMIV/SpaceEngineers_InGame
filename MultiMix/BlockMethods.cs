@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		public static void ApplyAction(List<IMyTerminalBlock> blks, string actName) {
 			foreach(var b in blks)
 				b.ApplyAction(actName);

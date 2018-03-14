@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		YieldModule yieldMgr = null;
 		class YieldModule : TickBase {
 			public YieldModule(Program p) : base(p) {}

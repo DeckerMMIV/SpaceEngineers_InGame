@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		CargoModule cargoMgr = null;
 		class CargoModule : ModuleBase {
 			public CargoModule(Program p) : base(p) {}

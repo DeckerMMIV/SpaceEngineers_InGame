@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		EngineModule engineMgr = null;
 		class EngineModule : ModuleBase, IMenuCollector {
 			public EngineModule(Program p) : base(p) {}
@@ -136,34 +135,33 @@ namespace IngameScript {
 				if (null == thr)
 					return;
 
-				ThrustFlags flags = 0;
+				ThrustFlags flgs = 0;
 
 				if (SubtypeContains(blk, "Atmos"))
-					flags |= ThrustFlags.Atmospheric;
+					flgs |= ThrustFlags.Atmospheric;
 				else if (SubtypeContains(blk, "Hydro"))
-					flags |= ThrustFlags.Hydrogen;
+					flgs |= ThrustFlags.Hydrogen;
 				else
-					flags |= ThrustFlags.Ion;
+					flgs |= ThrustFlags.Ion;
 
 				if (null != dirRefBlk) {
 					// Calculate direction of thrust-block according to supplied reference-block.
 					int blkDir = (int)dirRefBlk.Orientation.TransformDirectionInverse(thr.Orientation.TransformDirection(Base6Directions.Direction.Forward));
-					flags |= (ThrustFlags)(1 << blkDir);
+					flgs |= (ThrustFlags)(1 << blkDir);
 				}
 
-				//
 				Inc("All Thrusters", thr);
 
-				if (flags.HasFlag(ThrustFlags.Atmospheric)) Inc("Atmospheric", thr);
-				if (flags.HasFlag(ThrustFlags.Hydrogen)) Inc("Hydrogen", thr);
-				if (flags.HasFlag(ThrustFlags.Ion)) Inc("Ion", thr);
+				if (flgs.HasFlag(ThrustFlags.Atmospheric)) Inc("Atmospheric", thr);
+				if (flgs.HasFlag(ThrustFlags.Hydrogen)) Inc("Hydrogen", thr);
+				if (flgs.HasFlag(ThrustFlags.Ion)) Inc("Ion", thr);
 
-				if (flags.HasFlag(ThrustFlags.Front)) Inc("Front", thr);
-				if (flags.HasFlag(ThrustFlags.Back)) Inc("Back", thr);
-				if (flags.HasFlag(ThrustFlags.Left)) Inc("Left", thr);
-				if (flags.HasFlag(ThrustFlags.Right)) Inc("Right", thr);
-				if (flags.HasFlag(ThrustFlags.Top)) Inc("Top", thr);
-				if (flags.HasFlag(ThrustFlags.Bottom)) Inc("Bottom", thr);
+				if (flgs.HasFlag(ThrustFlags.Front)) Inc("Front", thr);
+				if (flgs.HasFlag(ThrustFlags.Back)) Inc("Back", thr);
+				if (flgs.HasFlag(ThrustFlags.Left)) Inc("Left", thr);
+				if (flgs.HasFlag(ThrustFlags.Right)) Inc("Right", thr);
+				if (flgs.HasFlag(ThrustFlags.Top)) Inc("Top", thr);
+				if (flgs.HasFlag(ThrustFlags.Bottom)) Inc("Bottom", thr);
 			}
 			void Inc(string name, IMyThrust thr) {
 				Counters cnt;

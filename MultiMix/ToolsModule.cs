@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		ToolsModule toolsMgr = null;
 		class ToolsModule : ModuleBase, IMenuCollector {
 			public ToolsModule(Program p) : base(p) {}

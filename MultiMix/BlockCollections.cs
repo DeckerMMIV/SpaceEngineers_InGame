@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		public static T NextBlockInGrid<T>(Program pgm, IMyTerminalBlock gridRef, T curBlk, int dir) where T : class, IMyTerminalBlock {
 			var lst = new List<T>();
 			pgm.GridTerminalSystem.GetBlocksOfType(lst,b=>(null==gridRef || SameGrid(gridRef,b)));
@@ -29,8 +28,6 @@ namespace IngameScript {
 			return lst[(i+dir) % lst.Count];
 		}
 
-		//------
-
 		public static void ActionOnBlocksOfType<T>(Program pgm, IMyTerminalBlock gridRef, Action<T> act) where T : class, IMyTerminalBlock {
 			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => {
 				if (null==gridRef || SameGrid(gridRef,b))
@@ -38,8 +35,6 @@ namespace IngameScript {
 				return false;
 			});
 		}
-
-		//------
 
 		public static void GatherBlocks(Program pgm, params Func<IMyTerminalBlock, bool>[] pipeline) {
 			pgm.GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(null, b => {
@@ -50,8 +45,6 @@ namespace IngameScript {
 				return false;
 			});
 		}
-
-		//------
 
 		public static List<IMyTerminalBlock> GetBlocksOfType(Program pgm, string blockType, IMyTerminalBlock gridRef=null, string customName = null, bool negName = false) {
 			return GetBlocksOfType(new List<IMyTerminalBlock>(),pgm,blockType,gridRef,customName,negName);

@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		AscendDecendModule ascDecMgr = null;
 		class AscendDecendModule : TickBase {
 			public AscendDecendModule(Program p) : base(p) {}
@@ -244,7 +243,7 @@ if (!sc.ControlThrusters)
 				sb1.Append($"\n Mode: {OperationMode} \u2022 State: {curState}");
 				sb1.Append("\n Alignment: ").Append((align.Active ? "Enabled" : "Off")).Append(" \u2022 AlignMode: ").Append(align.RocketMode ? "Rocket" : "Ship").Append(align.Inverted ? " (Inverted)" : "");
 				string alti = (double.IsNaN(altitudeSurface) ? "---" : $"{altitudeSurface:F1}");
-				string altiDiff = ((double.IsNaN(altitudeDiff) || Math.Abs(altitudeDiff) < 1) ? "" : ((altitudeDiff > 0) ? " " : " "));
+				string altiDiff = ((double.IsNaN(altitudeDiff) || Math.Abs(altitudeDiff) < 1) ? "" : ((altitudeDiff > 0) ? " ^^^" : " vvv"));
 				sb1.Append($"\n Altitude: {alti} m{altiDiff} \u2022 Gravity: {gravity:F3} g");
 				sb1.Append($"\n Spd: {currSpeed:F2} m/s \u2022 Acc.: {currAccl:F2} \u2022 Atm.: {atmosphereDensity:F1}");
 				if (Mode.Descend == mode) {

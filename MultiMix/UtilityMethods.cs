@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		StringBuilder _log = new StringBuilder();
 		public void Log(string txt, bool nl = true) {
 			_log.Append(txt);
@@ -27,7 +26,6 @@ namespace IngameScript {
 			AppendPctBar(_log, txt, pct, barLen, nl);
 		}
 
-		//-------------
 		public static StringBuilder AppendPctBar(StringBuilder sb, string txt, double pct, bool nl) {
 			return AppendPctBar(sb, txt, pct, 70, nl);
 		}
@@ -88,6 +86,15 @@ namespace IngameScript {
 			g.Pitch = p;
 			g.Yaw = y;
 			g.Roll = r;
+			g.GyroPower = power;
+		}
+
+		private const float pi2 = 2*(float)Math.PI;
+		public static void SetGyroRad(IMyGyro g, float power = 1, bool overrule = false, float p = 0, float y = 0, float r = 0) {
+			g.GyroOverride = overrule;
+			g.Pitch = p / pi2;
+			g.Yaw = y / pi2;
+			g.Roll = r / pi2;
 			g.GyroPower = power;
 		}
 

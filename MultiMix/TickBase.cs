@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		abstract class ModuleBase {
 			public ModuleBase(Program p) { Pgm = p; }
 			protected Program Pgm;
@@ -24,7 +23,6 @@ namespace IngameScript {
 			protected IMyProgrammableBlock Me { get { return Pgm.Me; } }
 		}
 
-		//-------------
 		UpdateFrequency Tick(TickBase obj) {
 			if (null != obj && obj.Active)
 				return obj.Tick();
@@ -34,7 +32,7 @@ namespace IngameScript {
 		abstract class TickBase : ModuleBase {
 			public TickBase(Program p) : base(p) {}
 			public bool Active { get; set; } = true;
-			abstract public UpdateFrequency Tick(); // returns; false = use SlowTrigger, true = use FastTrigger
+			abstract public UpdateFrequency Tick();
 		}
 	}
 }

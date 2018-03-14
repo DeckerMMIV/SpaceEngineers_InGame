@@ -16,14 +16,27 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		class OutputPanel {
+			public int Count { get { return lcds.Count; } }
+
 			public void Add(IMyTextPanel p) {
 				lcds.Add(p);
 			}
 
 			public void Clear() {
 				lcds.Clear();
+			}
+
+			public void SetFont(string fontName, float fontSize=1.0f) {
+				foreach(var p in lcds) {
+					p.FontSize = fontSize;
+					p.Font = fontName;
+				}
+			}
+			public void SetColor(Color foreColor, Color backColor) {
+				foreach(var p in lcds) {
+					p.FontColor = foreColor;
+				}
 			}
 
 			public void WritePublicText(StringBuilder sb) {
