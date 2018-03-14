@@ -19,14 +19,13 @@ namespace IngameScript {
 		class OutputPanel {
 			public int Count { get { return lcds.Count; } }
 
-			public void Add(IMyTextPanel p) {
-				lcds.Add(p);
-			}
+			public void Add(IMyTextPanel p) { lcds.Add(p); }
+			public void Clear() { lcds.Clear(); }
 
-			public void Clear() {
-				lcds.Clear();
+			public void SetAlign(int align) {
+				foreach(var p in lcds)
+					p.SetValue("alignment",(Int64)align);
 			}
-
 			public void SetFont(string fontName, float fontSize=1.0f) {
 				foreach(var p in lcds) {
 					p.FontSize = fontSize;

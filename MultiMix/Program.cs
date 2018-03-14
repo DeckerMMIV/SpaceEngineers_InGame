@@ -60,6 +60,7 @@ namespace IngameScript {
 		}
 
 		void Main2(string args) {
+			Runtime.UpdateFrequency = UpdateFrequency.None;
 			var blks = GetBlocksOfType(this, args);
 			if (1 > blks.Count) {
 				Echo($"No blocks found for; {args}");
