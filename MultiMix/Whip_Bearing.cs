@@ -18,7 +18,11 @@ namespace IngameScript {
 	partial class Program {
 		Whip_Bearing bearingMgr = null;
 		class Whip_Bearing : ModuleBase {
-			public Whip_Bearing(Program p) : base(p) {}
+			public Whip_Bearing(Program p) : base(p) {
+				var m = ">----<";
+				var n = $"N.W{m}.N.{m}N.E{m}.E.{m}S.E{m}.S.{m}S.W{m}.W.{m}";
+				compassStr = $"{n}{n}";
+			}
 
 			IMyShipController sc = null;
 			OutputPanel lcds;
@@ -74,9 +78,7 @@ namespace IngameScript {
 			Vector3D absNorthVecPlanetWorlds = new Vector3D(0, -1, 0);
 			Vector3D absNorthVecNotPlanetWorlds = new Vector3D(0.342063708833718, -0.704407897782847, -0.621934025954579);
 
-			static string m = ">----<";
-			static string n = $"N.W{m}.N.{m}N.E{m}.E.{m}S.E{m}.S.{m}S.W{m}.W.{m}";
-			string compassStr = $"{n}{n}";
+			readonly string compassStr;
 
 			Vector3D absNorthVec;
 			string bearingStr = "";
@@ -99,7 +101,7 @@ namespace IngameScript {
 				var forwardProjPlaneVec = VectorProjection(forwardVec, relativeEastVec) + VectorProjection(forwardVec, relativeNorthVec);
 
 				//find angle from abs north to projected forward vector measured clockwise  
-				double bearingAng = Math.Acos(forwardProjPlaneVec.Dot(relativeNorthVec) / forwardProjPlaneVec.Length() / relativeNorthVec.Length()) * (180 / Math.PI);
+				var bearingAng = Math.Acos(forwardProjPlaneVec.Dot(relativeNorthVec) / forwardProjPlaneVec.Length() / relativeNorthVec.Length()) * (180 / Math.PI);
 
 				//check direction of angle  
 				if (forwardVec.Dot(relativeEastVec) < 0) {
@@ -108,11 +110,6 @@ namespace IngameScript {
 
 				var lne = compassStr.Substring(MathHelper.Clamp((int)Math.Round(bearingAng / 5), 0, 359), 20);
 				var ang = string.Format("{0:000}", Math.Round(bearingAng));
-				//if (writeBearingOnCompass) {
-				//	bearingStr = $"\n{lne.Substring(0,8)}<{ang}>{lne.Substring(13,8)}\n^";
-				//} else {
-				//	bearingStr = $"\nBearing: {ang}\n{lne}\n^";
-				//}
 				bearingStr = $"\n{lne}\nBearing ^ {ang}    ";
 
 				return true;
