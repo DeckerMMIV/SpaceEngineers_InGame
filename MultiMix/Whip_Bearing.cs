@@ -43,9 +43,8 @@ namespace IngameScript {
 					if (value && null != sc) {
 						if (!isActive)
 							Pgm.yieldMgr?.Add(Update());
-					} else {
+					} else
 						isActive = false;
-					}
 				}
 			}
 			bool isActive = false;
@@ -56,15 +55,15 @@ namespace IngameScript {
 				int thisInstance = ++instanceNum;
 				isActive = true;
 				absNorthVec = absNorthVecPlanetWorlds;
-				while (isActive && thisInstance == instanceNum) {
+				while (isActive && thisInstance == instanceNum)
 					yield return UpdateBearing() ? 150 : 5000;
-				}
 			}
 
 			bool UpdateBearing()
 			{
 				if (GetBearing()) {
-					lcds.ShowPublicText(bearingStr); 
+					if (lastAng!=ang)
+						lcds.ShowPublicText(bearingStr); 
 					return true;
 				}
 				lcds.ShowPublicText("\nError:\nNo natural gravity");
@@ -82,13 +81,14 @@ namespace IngameScript {
 
 			Vector3D absNorthVec;
 			string bearingStr = "";
+			int ang=0;
+			int lastAng=0;
 
 			bool GetBearing()
 			{
 				var gravityVec = sc.GetNaturalGravity();
-				if (Vector3D.IsZero(gravityVec)) {
+				if (Vector3D.IsZero(gravityVec))
 					return false;
-				}
 
 				//get east vector  
 				var relativeEastVec = gravityVec.Cross(absNorthVec);
@@ -104,13 +104,13 @@ namespace IngameScript {
 				var bearingAng = Math.Acos(forwardProjPlaneVec.Dot(relativeNorthVec) / forwardProjPlaneVec.Length() / relativeNorthVec.Length()) * (180 / Math.PI);
 
 				//check direction of angle  
-				if (forwardVec.Dot(relativeEastVec) < 0) {
+				if (forwardVec.Dot(relativeEastVec) < 0)
 					bearingAng = 360 - bearingAng; //because of how the angle is measured  
-				}
 
 				var lne = compassStr.Substring(MathHelper.Clamp((int)Math.Round(bearingAng / 5), 0, 359), 20);
-				var ang = string.Format("{0:000}", Math.Round(bearingAng));
-				bearingStr = $"\n{lne}\nBearing ^ {ang}    ";
+				lastAng = ang;
+				ang = (int)Math.Round(bearingAng);
+				bearingStr = $"\n{lne}\nBearing ^ {ang:000}    ";
 
 				return true;
 			}

@@ -54,25 +54,25 @@ namespace IngameScript {
 			return amt;
 		}
 		public static string GetItemType(IMyInventoryItem invItem) {
-			string itype = invItem.Content.TypeId.ToString();
+			var itype = invItem.Content.TypeId.ToString();
 			itype = itype.Substring(itype.LastIndexOf('_') + 1);
-			string stype = invItem.Content.SubtypeId.ToString();
+			var stype = invItem.Content.SubtypeId.ToString();
 			if (itype.StartsWith("Ore") || itype.StartsWith("Ingot"))
 				return $"{itype}/{stype}";
 			return stype;
 		}
 
 		public static string GetBlockType(IMyTerminalBlock blk) {
-			string itype = blk.BlockDefinition.TypeId.ToString();
+			var itype = blk.BlockDefinition.TypeId.ToString();
 			itype = itype.Substring(itype.LastIndexOf('_') + 1);
 			return itype;
 		}
 
 		public static bool SameGrid(IMyTerminalBlock me, IMyTerminalBlock blk) {
-			return me.CubeGrid == blk.CubeGrid;
+			return null==me || me.CubeGrid == blk.CubeGrid;
 		}
-		public static bool NameContains(IMyTerminalBlock blk, string search) {
-			return -1 < blk.CustomName.IndexOf(search, StringComparison.OrdinalIgnoreCase);
+		public static bool NameContains(IMyTerminalBlock blk, string src) {
+			return null==src || -1 < blk.CustomName.IndexOf(src, StringComparison.OrdinalIgnoreCase);
 		}
 		public static bool SubtypeContains(IMyTerminalBlock blk, string search) {
 			return blk.BlockDefinition.SubtypeId.Contains(search);
@@ -113,14 +113,14 @@ namespace IngameScript {
 		}
 
 		public static string PowerAsString(float value, int factor = 0) {
-			if (4 == factor || (0 == factor && 1000000000 < value)) return $"{value/1000000000:F2} GW";
-			if (3 == factor || (0 == factor && 1000000 < value)) return $"{value/1000000:F2} MW";
-			if (2 == factor || (0 == factor && 1000 < value)) return $"{value/1000:F2} kW";
-			return $"{value:F0} W";
+			if (4 == factor || (0 == factor && 1000000000 < value)) return $"{value/1000000000:0.00} GW";
+			if (3 == factor || (0 == factor && 1000000 < value)) return $"{value/1000000:0.00} MW";
+			if (2 == factor || (0 == factor && 1000 < value)) return $"{value/1000:0.00} kW";
+			return $"{value:0} W";
 		}
 
 		public static string VecToString(Vector3D vec) {
-			return (null == vec) ? "" : string.Format("{0:F3}:{1:F3}:{2:F3}", vec.GetDim(0), vec.GetDim(1), vec.GetDim(2));
+			return (null == vec) ? "" : string.Format("{0:0.000}:{1:0.000}:{2:0.000}", vec.GetDim(0), vec.GetDim(1), vec.GetDim(2));
 		}
 	}
 }

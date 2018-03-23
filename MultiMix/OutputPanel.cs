@@ -26,7 +26,7 @@ namespace IngameScript {
 				foreach(var p in lcds)
 					p.SetValue("alignment",(Int64)align);
 			}
-			public void SetFont(string fontName, float fontSize=1.0f) {
+			public void SetFont(string fontName, float fontSize=1) {
 				foreach(var p in lcds) {
 					p.FontSize = fontSize;
 					p.Font = fontName;

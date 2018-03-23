@@ -27,7 +27,7 @@ namespace IngameScript {
 		}
 
 		class MenuCommands {
-			protected const string UP="UP",DOWN="DOWN",LEFT="LEFT",RIGHT="RIGHT",ENTER="ENTER",BACK="BACK";
+			protected const string UP="UP",DN="DOWN",LEFT="LEFT",RGHT="RIGHT",ENTR="ENTER",BACK="BACK";
 		}
 
 		MenuManager menuMgr = null;
@@ -45,8 +45,8 @@ namespace IngameScript {
 				firstTime = dirty = true;
 			}
 
-			public void Add(params MenuItem[] items) {
-				mainMenu.AddArray(items);
+			public void Add(params MenuItem[] itms) {
+				mainMenu.AddArray(itms);
 				dirty = true;
 			}
 
@@ -59,21 +59,21 @@ namespace IngameScript {
 				lcds.WritePublicText(sb);
 			}
 
-			List<MenuItem> linearMenu = new List<MenuItem>();
+			List<MenuItem> linearMnu = new List<MenuItem>();
 			private void BuildLinearMenu() {
 				Action<int, List<MenuItem>> recurse = null;
 				recurse = (i, e) => {
 					if (null == e)
 						return;
 					foreach(var f in e) {
-						linearMenu.Add(f);
+						linearMnu.Add(f);
 						recurse((f.Indent = i) + 1, f.GetSubMenu());
 					}
 				};
 
-				linearMenu.Clear();
+				linearMnu.Clear();
 				recurse(1, mainMenu);
-				menuPos = MathHelper.Clamp(menuPos, 0, linearMenu.Count - 1);
+				menuPos = MathHelper.Clamp(menuPos, 0, linearMnu.Count - 1);
 				dirty = false;
 			}
 
@@ -84,7 +84,7 @@ namespace IngameScript {
 				sb.Append($"\u2022\u2022\u2022 Menu \u2022 MultiMix v{scriptVersion} \u2022\u2022\u2022 ").Append(DateTime.Now.ToString("HH\\:mm\\:ss\\.fff"));
 
 				if (firstTime) {
-					sb.Append($"\n MenuManager have been reinitialized. To\n control it please assign six cockpit toolbar-\n slots to run the programmable block with\n one of each argument:\n\n     {UP}\n     {DOWN}\n     {LEFT}\n     {RIGHT}\n\n     {ENTER}\n     {BACK}\n\n Once toolbar-slots are assigned, then\n use one of them to continue.\n")
+					sb.Append($"\n MenuManager have been reinitialized. To\n control it please assign six cockpit toolbar-\n slots to run the programmable block with\n one of each argument:\n\n     {UP}\n     {DN}\n     {LEFT}\n     {RGHT}\n\n     {ENTR}\n     {BACK}\n\n Once toolbar-slots are assigned, then\n use one of them to continue.\n")
 					.Append('\u2022', 40);
 					return;
 				} 
@@ -92,17 +92,17 @@ namespace IngameScript {
 				if (dirty)
 					BuildLinearMenu();
 
-				int end = Math.Min(linearMenu.Count, lastStart + maxLines);
+				int end = Math.Min(linearMnu.Count, lastStart + maxLines);
 				if (menuPos <= lastStart) {
 					lastStart = Math.Max(0, menuPos - 1);
-					end = Math.Min(linearMenu.Count, lastStart + maxLines);
+					end = Math.Min(linearMnu.Count, lastStart + maxLines);
 				} else if (end <= menuPos + 1) {
-					lastStart = Math.Max(0, Math.Min(linearMenu.Count, menuPos + 1) - ((linearMenu.Count == menuPos + 1 ? 0 : -1) + maxLines));
-					end = Math.Min(linearMenu.Count, lastStart + maxLines);
+					lastStart = Math.Max(0, Math.Min(linearMnu.Count, menuPos + 1) - ((linearMnu.Count == menuPos + 1 ? 0 : -1) + maxLines));
+					end = Math.Min(linearMnu.Count, lastStart + maxLines);
 				}
 
 				for (int j = lastStart; j < end; j++) {
-					var collector = linearMenu[j].GetCollect();
+					var collector = linearMnu[j].GetCollect();
 					if (null != collector && !collectors.Contains(collector))
 						collectors.Add(collector);
 				}
@@ -120,7 +120,7 @@ namespace IngameScript {
 				}
 
 				for (int i = lastStart; i < end; i++) {
-					MenuItem mnu = linearMenu[i];
+					MenuItem mnu = linearMnu[i];
 					if (i == menuPos)
 						sb.Append("\n ").Append('\u00BB', mnu.Indent).Append(' ');
 					else
@@ -129,7 +129,7 @@ namespace IngameScript {
 				}
 
 				sb.Append('\n').Append('\u2022', 40).Append("\n Cmds:");
-				linearMenu[menuPos].AvailableCmds(sb);
+				linearMnu[menuPos].AvailableCmds(sb);
 			}
 
 			public bool DoAction(string arg) {
@@ -151,20 +151,20 @@ namespace IngameScript {
 				};
 
 				if (firstTime) {
-					firstTime = !(new List<string> { UP,DOWN,LEFT,RIGHT,ENTER,BACK }).Contains(arg);
+					firstTime = !(new List<string> { UP,DN,LEFT,RGHT,ENTR,BACK }).Contains(arg);
 					if (firstTime)
 						return recurse(mainMenu,arg);
 				} else if (UP == arg) {
-					menuPos = (menuPos - 1 + linearMenu.Count) % linearMenu.Count;
-				} else if (DOWN == arg) {
-					menuPos = (menuPos + 1) % linearMenu.Count;
+					menuPos = (menuPos - 1 + linearMnu.Count) % linearMnu.Count;
+				} else if (DN == arg) {
+					menuPos = (menuPos + 1) % linearMnu.Count;
 				} else {
-					MenuItem menu = linearMenu[menuPos];
+					MenuItem menu = linearMnu[menuPos];
 					bool prevVal = menu.ShowSubMenu;
 					switch (arg) {
 					case LEFT: menu.DoLeft(); break;
-					case RIGHT: menu.DoRight(); break;
-					case ENTER: menu.DoEnter(); break;
+					case RGHT: menu.DoRight(); break;
+					case ENTR: menu.DoEnter(); break;
 					case BACK: menu.DoBack(); break;
 					default: return recurse(mainMenu,arg);
 					}
@@ -292,14 +292,14 @@ namespace IngameScript {
 			}
 
 			public void AvailableCmds(StringBuilder sb) {
-				sb.Append($"{UP},{DOWN}");
-				bool more = null != items;
+				sb.Append($"{UP},{DN}");
+				var more = null != items;
 				if (null != actLeft || (more & showItems))
 					sb.Append($",{LEFT}");
 				if (null != actRight || (more & !showItems))
-					sb.Append($",{RIGHT}");
+					sb.Append($",{RGHT}");
 				if (null != actEnter || more)
-					sb.Append($",{ENTER}");
+					sb.Append($",{ENTR}");
 				if (null != actBack || (more & showItems))
 					sb.Append($",{BACK}");
 			}

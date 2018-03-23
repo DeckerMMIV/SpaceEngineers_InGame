@@ -18,26 +18,36 @@ namespace IngameScript {
 	partial class Program {
 		EngineModule engineMgr = null;
 		class EngineModule : ModuleBase, IMenuCollector {
-			public EngineModule(Program p) : base(p) {}
+			public EngineModule(Program p) : base(p) {
+				tsToggle = (tf) => SetEnabledAbsToggle(GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController()));
+				tsEnable = (tf,on) => SetEnabled(GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController()), on);
+				tsPower = (tf,modifier) => {
+					var lst = GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController());
+					if (0 != modifier && 0 < lst.Count) {
+						var current = 0f;
+						foreach(var b in lst)
+							current += (b as IMyThrust).ThrustOverridePercentage;
+						if (100f == modifier)
+							modifier = 0 < current ? 0 : 1; // Toggle between 0% and 100% thrust
+						else
+							modifier = MathHelper.Clamp((current / lst.Count) + Math.Sign(modifier) * 0.1f, 0, 1); // Inc./dec. thrust by 10%
+					}
+					SetThrustAbsPct(lst, modifier);
+				};
+			}
 
 			public void Refresh(IMyTerminalBlock _myGrid, IMyShipController _sc) {
 				myGrid = _myGrid;
 				dirRefBlk = _sc;
 			}
 
+			public readonly Action<ThrustFlags> tsToggle;
+			public readonly Action<ThrustFlags,bool> tsEnable;
+			public readonly Action<ThrustFlags,float> tsPower;
+
 			public void AddMenu(MenuManager menuMgr) {
 				if (1 > GetThrustBlocks(ThrustFlags.All, Pgm, Me).Count)
 					return; // No thrusters found
-
-				Action<ThrustFlags> tsToggle = (tf) => {
-					SetEnabledAbsToggle(GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController()));
-				};
-				Action<ThrustFlags> tsOn = (tf) => {
-					SetEnabled(GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController()), true);
-				};
-				Action<ThrustFlags> tsOff = (tf) => {
-					SetEnabled(GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController()), false);
-				};
 
 				const int p = 16; // padding
 				MenuItem tt;
@@ -46,24 +56,24 @@ namespace IngameScript {
 						Menu(() => GetText(1, "All Thrusters", p))
 							.Collect(this)
 							.Enter("toggleEngines", () => tsToggle(ThrustFlags.All))
-							.Left(() => tsOn(ThrustFlags.All))
-							.Right(() => tsOff(ThrustFlags.All)),
+							.Left(() => tsEnable(ThrustFlags.All,true))
+							.Right(() => tsEnable(ThrustFlags.All,false)),
 						Menu("Engine types").Add(
 							Menu(() => GetText(1, "Atmospheric", p + 0))
 								.Collect(this)
 								.Enter("toggleAtmos", () => tsToggle(ThrustFlags.Atmospheric))
-								.Left(() => tsOn(ThrustFlags.Atmospheric))
-								.Right(() => tsOff(ThrustFlags.Atmospheric)),
+								.Left(() => tsEnable(ThrustFlags.Atmospheric,true))
+								.Right(() => tsEnable(ThrustFlags.Atmospheric,false)),
 							Menu(() => GetText(1, "Ion", p + 8))
 								.Collect(this)
 								.Enter("toggleIon", () => tsToggle(ThrustFlags.Ion))
-								.Left(() => tsOn(ThrustFlags.Ion))
-								.Right(() => tsOff(ThrustFlags.Ion)),
+								.Left(() => tsEnable(ThrustFlags.Ion,true))
+								.Right(() => tsEnable(ThrustFlags.Ion,false)),
 							Menu(() => GetText(1, "Hydrogen", p + 2))
 								.Collect(this)
 								.Enter("toggleHydro", () => tsToggle(ThrustFlags.Hydrogen))
-								.Left(() => tsOn(ThrustFlags.Hydrogen))
-								.Right(() => tsOff(ThrustFlags.Hydrogen))
+								.Left(() => tsEnable(ThrustFlags.Hydrogen,true))
+								.Right(() => tsEnable(ThrustFlags.Hydrogen,false))
 						)
 					)
 				);
@@ -71,23 +81,6 @@ namespace IngameScript {
 				if (null == Pgm.GetShipController())
 					menuMgr.WarningText += "\n ShipController missing. Some features unavailable!";
 				else {
-					Action<ThrustFlags, float> tsPower = (tf, modifier) => {
-						var lst = GetThrustBlocks(tf, Pgm, Me, Pgm.GetShipController());
-						if (0 != modifier && 0 < lst.Count) {
-							float current = 0;
-							foreach(var b in lst)
-								current += (b as IMyThrust).ThrustOverridePercentage;
-
-							if (100f == modifier)
-								modifier = 0 < current ? 0 : 1; // Toggle between 0% and 100% thrust
-							else {
-								current /= lst.Count;
-								modifier = MathHelper.Clamp(current + Math.Sign(modifier) * 0.1f, 0, 1); // Inc./dec. thrust by 10%
-							}
-						}
-						SetThrustAbsPct(lst, modifier);
-					};
-
 					MenuItem md = Menu("Directions");
 					MenuItem mo = Menu("Override thrust");
 					int[] pad = new[] {p+2,p+1,p+3,p+1,p+2,p+0};
@@ -100,8 +93,8 @@ namespace IngameScript {
 							Menu(()=>GetText(1,txt,pad[j]))
 								.Collect(this)
 								.Enter("toggle"+txt,()=>tsToggle(tf))
-								.Left(()=>tsOn(tf))
-								.Right(()=>tsOff(tf))
+								.Left(()=>tsEnable(tf,true))
+								.Right(()=>tsEnable(tf,false))
 						);
 						mo.Add(
 							Menu(()=>GetText(2,txt,pad[j]))
@@ -120,15 +113,15 @@ namespace IngameScript {
 			IMyTerminalBlock myGrid;
 			IMyShipController dirRefBlk;
 			class Counters { public int enabled; public int disabled; public float curThrust; public float maxThrust; public float maxEffThrust; }
-			Dictionary<string, Counters> namedCounters = new Dictionary<string, Counters>();
+			Dictionary<string, Counters> namCntrs = new Dictionary<string, Counters>();
 
 			public void CollectSetup() {
-				namedCounters.Clear();
+				namCntrs.Clear();
 			}
 			public void CollectTeardown() {}
 
 			public void CollectBlock(IMyTerminalBlock blk) {
-				if (!SameGrid(blk, myGrid) || !blk.IsFunctional)
+				if (!SameGrid(myGrid, blk) || !blk.IsFunctional)
 					return;
 
 				var thr = blk as IMyThrust;
@@ -165,8 +158,8 @@ namespace IngameScript {
 			}
 			void Inc(string name, IMyThrust thr) {
 				Counters cnt;
-				if (!namedCounters.TryGetValue(name, out cnt))
-					namedCounters.Add(name, cnt = new Counters());
+				if (!namCntrs.TryGetValue(name, out cnt))
+					namCntrs.Add(name, cnt = new Counters());
 
 				if (thr.IsWorking)
 					cnt.enabled++;
@@ -178,13 +171,13 @@ namespace IngameScript {
 				cnt.maxEffThrust += thr.MaxEffectiveThrust;
 			}
 
-			public string GetText(int type, string pfx, int pad = 0) {
-				string nme = $"{pfx}:".PadRight(pad);
+			public string GetText(int tpe, string pfx, int pad = 0) {
+				var nme = $"{pfx}:".PadRight(pad);
 				Counters cnt;
-				switch (type) {
+				switch (tpe) {
 				case 1:
 					// Number of thrusters which are on/off
-					if (!namedCounters.TryGetValue(pfx, out cnt))
+					if (!namCntrs.TryGetValue(pfx, out cnt))
 						return $"{nme}-- / --";
 					if (0 == cnt.disabled)
 						return $"{nme}ON {cnt.enabled} / --";
@@ -193,10 +186,10 @@ namespace IngameScript {
 					return $"{nme}on {cnt.enabled} / {cnt.disabled} off";
 				case 2:
 					// The current override value of thrusters
-					if (!namedCounters.TryGetValue(pfx, out cnt))
+					if (!namCntrs.TryGetValue(pfx, out cnt))
 						return $"{nme}???%  ??? N";
-					float pct = 0 >= cnt.maxThrust ? 0 : cnt.curThrust / cnt.maxThrust * 100;
-					return $"{nme}{pct:F0}%  {cnt.curThrust:F0} N";
+					int pct = (int)(0 >= cnt.maxThrust ? 0 : cnt.curThrust / cnt.maxThrust * 100);
+					return $"{nme}{pct}%  {cnt.curThrust} N";
 				}
 				return $"{nme}???";
 			}

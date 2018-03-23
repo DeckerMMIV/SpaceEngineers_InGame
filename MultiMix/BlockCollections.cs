@@ -18,29 +18,29 @@ namespace IngameScript {
 	partial class Program {
 		public static T NextBlockInGrid<T>(Program pgm, IMyTerminalBlock gridRef, T curBlk, int dir) where T : class, IMyTerminalBlock {
 			var lst = new List<T>();
-			pgm.GridTerminalSystem.GetBlocksOfType(lst,b=>(null==gridRef || SameGrid(gridRef,b)));
+			pgm.GridTerminalSystem.GetBlocksOfType(lst,blk=>SameGrid(gridRef,blk));
 			if (1 > lst.Count)
 				return null;
 			if (null == curBlk)
 				return lst[0];
-			int i=0;
-			while (lst[i].EntityId != curBlk.EntityId && lst.Count > ++i) {}
-			return lst[(i+dir) % lst.Count];
+			int itr=0;
+			while (lst[itr].EntityId != curBlk.EntityId && lst.Count > ++itr) {}
+			return lst[(itr+dir) % lst.Count];
 		}
 
 		public static void ActionOnBlocksOfType<T>(Program pgm, IMyTerminalBlock gridRef, Action<T> act) where T : class, IMyTerminalBlock {
-			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, b => {
-				if (null==gridRef || SameGrid(gridRef,b))
-					act(b as T);
+			pgm.GridTerminalSystem.GetBlocksOfType((List<T>)null, blk => {
+				if (SameGrid(gridRef,blk))
+					act(blk as T);
 				return false;
 			});
 		}
 
 		public static void GatherBlocks(Program pgm, params Func<IMyTerminalBlock, bool>[] pipeline) {
-			pgm.GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(null, b => {
+			pgm.GridTerminalSystem.GetBlocksOfType<IMyTerminalBlock>(null, blk => {
 				// Iterate through pipeline, until a segment returns `false`
-				foreach (var f in pipeline)
-					if (!f(b))
+				foreach (var fnc in pipeline)
+					if (!fnc(blk))
 						break;
 				return false;
 			});
@@ -51,7 +51,7 @@ namespace IngameScript {
 		}
 
 		public static List<IMyTerminalBlock> GetBlocksOfType(List<IMyTerminalBlock> blks, Program pgm, string blockType, IMyTerminalBlock gridRef=null, string customName = null, bool negName = false) {
-			Func<IMyTerminalBlock, bool> fCmp = b => ((null==gridRef || SameGrid(b, gridRef)) && (null==customName || NameContains(b, customName) ? !negName : negName));
+			Func<IMyTerminalBlock, bool> fCmp = blk => (SameGrid(gridRef,blk) && (NameContains(blk,customName) ? !negName : negName));
 			var gts = pgm.GridTerminalSystem;
 
 			switch (blockType.ToLower()) {

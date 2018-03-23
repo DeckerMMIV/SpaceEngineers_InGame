@@ -16,6 +16,7 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
+		const long TPS = TimeSpan.TicksPerSecond;
 		YieldModule yieldMgr = null;
 		class YieldModule : TickBase {
 			public YieldModule(Program p) : base(p) {}
@@ -34,12 +35,10 @@ namespace IngameScript {
 							return UpdateFrequency.Update100;
 						p = pending.First();
 					}
-					if (p.Key <= Pgm.totalTicks + (TimeSpan.TicksPerSecond / 60)) {
+					if (p.Key <= Pgm.totalTicks + (TPS / 60))
 						return UpdateFrequency.Update1;
-					}
-					if (p.Key <= Pgm.totalTicks + (TimeSpan.TicksPerSecond / 6)) {
+					if (p.Key <= Pgm.totalTicks + (TPS / 6))
 						return UpdateFrequency.Update10;
-					}
 				}
 				return UpdateFrequency.Update100;
 			}
@@ -48,10 +47,9 @@ namespace IngameScript {
 				if (!iter.MoveNext())
 					iter.Dispose();
 				else {
-					long nextTick = Pgm.totalTicks + TimeSpan.FromMilliseconds(iter.Current).Ticks;
-					while (pending.ContainsKey(nextTick)) {
+					var nextTick = Pgm.totalTicks + TimeSpan.FromMilliseconds(iter.Current).Ticks;
+					while (pending.ContainsKey(nextTick))
 						nextTick++; // Ensure no duplicate keys are added to SortedList<>.
-					}
 					pending.Add(nextTick,iter);
 				}
 			}

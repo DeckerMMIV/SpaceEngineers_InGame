@@ -35,7 +35,7 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "4.3.1"; // 2018-03-13
+		const string scriptVersion = "4.4.0"; // 2018-03-23
 
 		Program() {
 			Runtime.UpdateFrequency = UpdateFrequency.Update100;
@@ -46,14 +46,14 @@ namespace IngameScript {
 
 		void Main(string args, UpdateType updateSource) {
 			if (null!=profiler) {
-				profiler.Append($";{Runtime.LastRunTimeMs:F3}\n{DateTime.Now.Ticks};{Runtime.TimeSinceLastRun.Ticks}");
+				profiler.Append($";{Runtime.LastRunTimeMs:0.000}\n{DateTime.Now.Ticks};{Runtime.TimeSinceLastRun.Ticks}");
 				if (99900 < profiler.Length) { args="PROFILER"; } // Force-Stop the profiler!
 			}
 			try {
 				Main1(args);
-			} catch (System.Exception e) {
-				Echo($"FAILED!\n{e.Message}");
-				lcdCenter.ShowPublicText($"Program Block Runtime Error!\n{e.Message}");
+			} catch (System.Exception excp) {
+				Echo($"FAILED!\n{excp.Message}");
+				lcdCntr.ShowPublicText($"Program Block Runtime Error!\n{excp.Message}");
 				// TODO - Future enhancement. If failed because of referencing non-existing block, then try to automatically recover - except if its the timer-block.
 			}
 			profiler?.Append($";{Runtime.CurrentInstructionCount}");
@@ -84,41 +84,41 @@ namespace IngameScript {
 		}
 
 		long totalTicks;
-		long menuUpdateTick;
+		long mnuUpdTick;
 		bool lastRunSuccess = false;
 		OutputPanel lcdLeft = new OutputPanel();
-		OutputPanel lcdCenter = new OutputPanel();
-		OutputPanel lcdRight = new OutputPanel();
+		OutputPanel lcdCntr = new OutputPanel();
+		OutputPanel lcdRght = new OutputPanel();
 
 		void Main1(string args) {
-			UpdateFrequency nextUpdFreq = UpdateFrequency.None;
+			var nxtUpdFrq = UpdateFrequency.None;
 			if (!lastRunSuccess) {
 				Init();
-				nextUpdFreq |= UpdateFrequency.Update1;
+				nxtUpdFrq |= UpdateFrequency.Update1;
 			} else {
 				lastRunSuccess = false;
 				totalTicks += Runtime.TimeSinceLastRun.Ticks;
 
-				bool updateMenu = menuUpdateTick < totalTicks;
+				var updMnu = mnuUpdTick < totalTicks;
 				if (0 == args.Length) {
 					var sc = GetShipController();
 					if (null != sc && !sc.ControlThrusters) {
-						nextUpdFreq |= UpdateFrequency.Update1;
+						nxtUpdFrq |= UpdateFrequency.Update1;
 						args = MoveIndicator2Command(sc.MoveIndicator);
 					}
 				}
 				if (0 < args.Length)
-					updateMenu |= ProgramCommand(args);
+					updMnu |= ProgramCommand(args);
 
-				nextUpdFreq |= Tick(ascDecMgr);
-				nextUpdFreq |= Tick(yieldMgr);
+				nxtUpdFrq |= Tick(ascDecMgr);
+				nxtUpdFrq |= Tick(yieldMgr);
 
-				if (updateMenu) {
-					menuUpdateTick = totalTicks + TimeSpan.TicksPerSecond;
-					menuMgr.DrawMenu(lcdCenter);
+				if (updMnu) {
+					mnuUpdTick = totalTicks + TPS;
+					menuMgr.DrawMenu(lcdCntr);
 				}
 			}
-			Runtime.UpdateFrequency = nextUpdFreq;
+			Runtime.UpdateFrequency = nxtUpdFrq;
 			lastRunSuccess = true;
 		}
 
@@ -127,28 +127,28 @@ namespace IngameScript {
 				throw new Exception($"Programmable block does not have '{MultiMix_UsedBlocks}' in its custom-name.\nDid you read the instructions?");
 
 			lcdLeft.Clear();
-			lcdCenter.Clear();
-			lcdRight.Clear();
+			lcdCntr.Clear();
+			lcdRght.Clear();
 			var lcdBearing = new OutputPanel();
 			ActionOnBlocksOfType<IMyTextPanel>(this, Me, p=>{
 				if (p.IsWorking && !NameContains(p, MultiMix_IgnoreBlocks))
 					if (NameContains(p, "Center"))
-						lcdCenter.Add(p);
+						lcdCntr.Add(p);
 					else if (NameContains(p, "Left"))
 						lcdLeft.Add(p);
 					else if (NameContains(p, "Right"))
-						lcdRight.Add(p);
+						lcdRght.Add(p);
 					else if (NameContains(p, "Bearing"))
 						lcdBearing.Add(p);
 			});
 			lcdLeft.ShowPublicText("Initializing: Left panel(s)");
-			lcdCenter.ShowPublicText("Initializing: Center panel(s)");
-			lcdRight.ShowPublicText("Initializing: Right panel(s)");
+			lcdCntr.ShowPublicText("Initializing: Center panel(s)");
+			lcdRght.ShowPublicText("Initializing: Right panel(s)");
 
 			var sc = GetShipController(MultiMix_UsedBlocks, true);
 
-			bool alignActive = alignMgr?.Active ?? false;
-			bool cargoActive = cargoMgr?.Active ?? true;
+			var alignActive = alignMgr?.Active ?? false;
+			var cargoActive = cargoMgr?.Active ?? true;
 
 			alignMgr = alignMgr ?? new AlignModule(this);
 			ascDecMgr = ascDecMgr ?? new AscendDecendModule(this);
@@ -156,7 +156,7 @@ namespace IngameScript {
 			yieldMgr = yieldMgr ?? new YieldModule(this);
 
 			alignMgr.Refresh(ascDecMgr, sc);
-			ascDecMgr.Refresh(lcdRight, alignMgr, sc);
+			ascDecMgr.Refresh(lcdRght, alignMgr, sc);
 			cargoMgr.Refresh(lcdLeft);
 
 			alignMgr.Active = alignActive;
@@ -184,7 +184,7 @@ namespace IngameScript {
 			case "HELP":
 				var sb = new StringBuilder();
 				sb.Append("== Direct Commands ==");
-				foreach(string txt in menuMgr.AllDirectCommands())
+				foreach(var txt in menuMgr.AllDirectCommands())
 					sb.Append($"\n  {txt}");
 				sb.Append("\n======");
 				Echo(sb.ToString());
@@ -269,7 +269,7 @@ namespace IngameScript {
 				shipCtrl = null;
 				var lst = new List<IMyShipController>();
 				GridTerminalSystem.GetBlocksOfType(lst, b => {
-					if (!b.CanControlShip || !b.IsWorking || !SameGrid(b, Me))
+					if (!b.CanControlShip || !b.IsWorking || !SameGrid(Me, b))
 						return false;
 					if (null != primaryName && NameContains(b, primaryName))
 						shipCtrl = b as IMyShipController;
@@ -296,7 +296,7 @@ namespace IngameScript {
 			ConnectorLockInfo="";
 			var lst = new List<IMyTerminalBlock>();
 
-			bool isLocked = false;
+			var isLocked = false;
 			foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true))
 				if (MyShipConnectorStatus.Connected == (b as IMyShipConnector).Status)
 					isLocked = true;
@@ -314,7 +314,7 @@ namespace IngameScript {
 				rc.DampenersOverride = true;
 			yield return 10;
 
-			float atmosphere = -1;
+			var atmosphere = -1f;
 			foreach(var b in GetBlocksOfType(lst,this,"parachute",Me)) {
 				var p = b as IMyParachute;
 				if (p.IsWorking)
@@ -347,7 +347,7 @@ namespace IngameScript {
 			ConnectorUnlockInfo="";
 			var lst = new List<IMyTerminalBlock>();
 
-			bool isUnlocked = true;
+			var isUnlocked = true;
 			foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true))
 				if (MyShipConnectorStatus.Connected == (b as IMyShipConnector).Status)
 					isUnlocked = false;
@@ -368,7 +368,7 @@ namespace IngameScript {
 			yield return 100;
 			
 			int maxAttempts = 10;
-			bool isLocked = false;
+			var isLocked = false;
 			do {
 				ConnectorLockInfo=$"Attempting ({maxAttempts})";
 				foreach(var b in GetBlocksOfType(lst,this,"connector",Me,MultiMix_IgnoreBlocks,true)) {

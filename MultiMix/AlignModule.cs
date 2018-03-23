@@ -16,7 +16,6 @@ using VRageMath;
 
 namespace IngameScript {
 	partial class Program {
-		//-------------
 		AlignModule alignMgr = null;
 		class AlignModule : ModuleBase {
 			public AlignModule(Program p) : base(p) {}
@@ -32,10 +31,11 @@ namespace IngameScript {
 							.Enter("toggleAlignVelocity", () => IgnoreGravity = !IgnoreGravity),
 						Menu(() => LabelOnOff(!RocketMode, "Mode:", "Ship", "Rocket"))
 							.Enter("toggleAlignRocket", () => RocketMode = !RocketMode),
-						Menu(() => $"Gyro coeff: {GyroCoeff:F1}")
+						Menu(() => $"Gyro coeff: {GyroCoeff}")
 							.Left(() => GyroCoeff -= 0.1)
 							.Right(() => GyroCoeff += 0.1)
-							.Back(() => GyroCoeff = 0.5)
+							.Back(() => GyroCoeff = 0.5),
+						Menu(() => $"Num Gyros: {gyros.Count}")
 					)
 				);
 			}
@@ -52,8 +52,8 @@ namespace IngameScript {
 
 				IMyGyro g = null;
 				GatherBlocks(Pgm 
-					,(b) => SameGrid(b,Me) && !NameContains(b,MultiMix_IgnoreBlocks)
-					,(b) => { if (ToType(b, ref g) && g.IsWorking) { gyros.Add(g); return false; } return true; }
+					,a => SameGrid(Me,a) && !NameContains(a,MultiMix_IgnoreBlocks)
+					,b => { if (ToType(b, ref g) && g.IsWorking) { gyros.Add(g); return false; } return true; }
 				);
 
 				maxYaw = (0 < gyros.Count ? gyros[0].GetMaximum<float>("Yaw") : 0);
@@ -129,6 +129,49 @@ namespace IngameScript {
 				}
 			}
 
+			bool AdjustGyros_v2() {
+				if (!ignoreGravity)
+					alignVec = sc.GetNaturalGravity();
+				if (ignoreGravity || Vector3D.IsZero(alignVec)) {
+					// When in zero-gravity, then use direction of ship-velocity instead
+					alignVec = sc.GetShipVelocities().LinearVelocity;
+					if (Vector3D.IsZero(alignVec)) {
+						// No usable velocity, reset all gyros
+						foreach(var g in gyros)
+							SetGyro(g);
+						return false;
+					}
+				}
+				if (!isInverted)
+					alignVec = Vector3D.Negate(alignVec);
+				alignVec.Normalize();
+
+				sc.Orientation.GetMatrix(out or); //Get orientation from reference-block
+				//down = (isRocket ? or.Backward : or.Down);
+				localDown = Vector3D.Transform((isRocket ? or.Backward : or.Down), MatrixD.Transpose(or));
+				localGrav = Vector3D.TransformNormal(alignVec, MatrixD.Transpose(sc.WorldMatrix));
+
+				rot = Vector3D.Cross(localDown, localGrav);
+				ang = rot.Length() + forceRotation; // Naive fix for "Gimbal lock"
+				ang = Math.Atan2(ang, Math.Sqrt(Math.Max(0.0, 1.0 - ang * ang))); //More numerically stable than: ang=Math.Asin(ang)
+				if (0.01 > ang) {
+					foreach(var g in gyros)
+						SetGyro(g);
+					return false;
+				}
+
+				//Control speed to be proportional to distance (angle) we have left
+				ctrl_vel = Math.Max(0.01, Math.Min(maxYaw, (maxYaw * (ang / Math.PI) * ctrl_Coeff)));
+				rot.Normalize();
+				rot *= -ctrl_vel;
+
+				foreach(var g in gyros) {
+					var gyroRot = Vector3D.TransformNormal(rot, MatrixD.Transpose(g.WorldMatrix));
+					SetGyroRad(g,1,true,(float)gyroRot.X, (float)gyroRot.Y, (float)gyroRot.Z);
+				}
+				return true;
+			}
+
 			bool AdjustGyros() {
 				// Credits to JoeTheDestroyer
 				// http://forums.keenswh.com/threads/aligning-ship-to-planet-gravity.7373513/#post-1286885461 
@@ -183,7 +226,7 @@ namespace IngameScript {
 					rot.Normalize();
 					rot *= -ctrl_vel;
 
-					SetGyro(g, 1, true, (float)rot.GetDim(0), (float)rot.GetDim(1), (float)rot.GetDim(2));
+					SetGyroRad(g, 1, true, (float)rot.GetDim(0), (float)rot.GetDim(1), (float)rot.GetDim(2));
 
 					alignDifference += ang;
 					needFastTrigger = true;

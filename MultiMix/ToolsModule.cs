@@ -24,9 +24,9 @@ namespace IngameScript {
 
 			public void AddMenu(MenuManager menuMgr) {
 				var tls = Menu("Tools");
-				bool foundTools = false;
+				var foundTools = false;
 
-				foreach (string tool in new[] { GR, WL, OD, DR })
+				foreach (var tool in new[] { GR, WL, OD, DR })
 					if (HasTool(tool)) {
 						foundTools = true;
 						tls.Add(
@@ -43,7 +43,7 @@ namespace IngameScript {
 					Action<int> yawRotate = (dir) => {
 						ActionOnBlocksOfType<IMyGyro>(Pgm, Me, g=>{
 							if (NameContains(g, DR)) {
-								float yawRpm = g.Yaw;
+								var yawRpm = g.Yaw;
 								if (0 == dir)
 									if (g.Enabled)
 										g.Enabled = false;
@@ -82,7 +82,7 @@ namespace IngameScript {
 
 					int i=0;
 					MenuItem bbox=Menu("Extend/Boundaries");
-					foreach(string txt in Pgm.DIRECTIONS) {
+					foreach(var txt in Pgm.DIRECTIONS) {
 						int j=++i;
 						bbox.Add(
 							Menu(()=>SensorText(txt,j,pad[j]))
@@ -94,7 +94,7 @@ namespace IngameScript {
 
 					i=10;
 					MenuItem typs=Menu("Object detection");
-					foreach(string txt in new[] {"Large ships","Small ships","Stations","Subgrids","Players","Asteroids","Floating obj."}) {
+					foreach(var txt in new[] {"Large ships","Small ships","Stations","Subgrids","Players","Asteroids","Floating obj."}) {
 						int j=++i;
 						typs.Add(
 							Menu(()=>SensorText(txt,j,pad[j]))
@@ -104,7 +104,7 @@ namespace IngameScript {
 
 					i=20;
 					MenuItem fctn=Menu("Faction recognition");
-					foreach(string txt in new[] {"Owner","Friendly","Neutral","Enemy"}) {
+					foreach(var txt in new[] {"Owner","Friendly","Neutral","Enemy"}) {
 						int j=++i;
 						fctn.Add(
 							Menu(()=>SensorText(txt,j,pad[j]))
@@ -164,7 +164,7 @@ namespace IngameScript {
 					);
 
 					int i=0;
-					foreach(string txt in new[] {"Offset X","Offset Y","Offset Z","Rotate X","Rotate Y","Rotate Z"}) {
+					foreach(var txt in new[] {"Offset X","Offset Y","Offset Z","Rotate X","Rotate Y","Rotate Z"}) {
 						int j=++i;
 						tp.Add(
 							Menu(()=>ProjectorText(txt,j))
@@ -187,7 +187,7 @@ namespace IngameScript {
 					);
 
 					int i=0;
-					foreach(string txt in new[] {"Width","Height","Depth","Strength"}) {
+					foreach(var txt in new[] {"Width","Height","Depth","Strength"}) {
 						int j=++i;
 						tp.Add(
 							Menu(()=>GravityGeneratorText(txt,j))
@@ -286,7 +286,7 @@ namespace IngameScript {
 				try {
 					lst[0].GetProperty(BL);
 					var blk = lst[0];
-					float beamLength = blk.GetValueFloat(BL);
+					var beamLength = blk.GetValueFloat(BL);
 					beamLength = MathHelper.Clamp(beamLength+dir, 1, 20);
 					foreach(var b in lst)
 						b.SetValueFloat(BL,beamLength);
@@ -363,7 +363,7 @@ namespace IngameScript {
 					case 24: sfx=YesNo(sensor.DetectEnemy); break;
 					}
 				}
-				string nme=$"{lbl}{mfx}:".PadRight(p);
+				var nme=$"{lbl}{mfx}:".PadRight(p);
 				return $"{nme}{sfx}";
 			}
 			#endregion

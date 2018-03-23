@@ -192,7 +192,7 @@ namespace IngameScript {
 			long autoDecendNextTick = 0;
 			private void DoAutoDecend() {
 				if (AutoDecend && autoDecendNextTick < Pgm.totalTicks) {
-					autoDecendNextTick = Pgm.totalTicks + TimeSpan.TicksPerSecond;
+					autoDecendNextTick = Pgm.totalTicks + TPS;
 					Pgm.yieldMgr?.Add(DoDescend());
 				}
 			}
@@ -226,7 +226,7 @@ namespace IngameScript {
 					filterOreStone = new List<MyInventoryItemFilter> { oreStone };
 
 					pipeline = new List<Func<IMyTerminalBlock, bool>> {
-						b => SameGrid(b,Me) && !NameContains(b,MultiMix_IgnoreBlocks) && b.IsFunctional,
+						a => SameGrid(Me,a) && !NameContains(a,MultiMix_IgnoreBlocks) && a.IsFunctional,
 						b => {
 							var e=b as IMyShipConnector;
 							if (null==e)
@@ -241,8 +241,8 @@ namespace IngameScript {
 							}
 							return false;
 						},
-						b => {
-							var s=b as IMyConveyorSorter;
+						c => {
+							var s=c as IMyConveyorSorter;
 							if (null==s)
 								return true;
 							sorters.Add(s);
@@ -253,11 +253,11 @@ namespace IngameScript {
 								s.SetFilter(MyConveyorSorterMode.Whitelist, filterOreStone);
 							return false;
 						},
-						b => {
+						d => {
 							// IMyShipConnector and IMyConveyorSorter have already been filtered out.
-							if (1 != b.InventoryCount || b is IMyReactor || b is IMyCockpit)
+							if (1 != d.InventoryCount || d is IMyReactor || d is IMyCockpit)
 								return true;
-							inventories.Add(b);
+							inventories.Add(d);
 							return false;
 						},
 					};

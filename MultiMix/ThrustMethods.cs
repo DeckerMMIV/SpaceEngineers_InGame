@@ -84,17 +84,17 @@ namespace IngameScript {
 			// Default return value is an empty list
 			lst.Clear();
 
-			ThrustFlags engineTypes = flgs & ThrustFlags.AllEngines;
+			var engineTypes = flgs & ThrustFlags.AllEngines;
 			if (ThrustFlags.AllEngines == engineTypes)
 				// When 'all engine types', then use value zero
 				engineTypes = 0;
 
-			ThrustFlags engineSizes = flgs & ThrustFlags.AllSizes;
+			var engineSizes = flgs & ThrustFlags.AllSizes;
 			if (ThrustFlags.AllSizes == engineSizes)
 				// When 'all engine sizes', then use value zero
 				engineSizes = 0;
 
-			ThrustFlags thrustDirs = flgs & ThrustFlags.AllDirections;
+			var thrustDirs = flgs & ThrustFlags.AllDirections;
 			if (ThrustFlags.AllDirections == thrustDirs)
 				// When 'all thrust directions', then use value zero
 				thrustDirs = 0;
@@ -105,13 +105,13 @@ namespace IngameScript {
 
 			// Collect the thrust-blocks which matches criteria of the thrust-flags requested
 			pgm.GridTerminalSystem.GetBlocksOfType<IMyThrust>(lst, thr => {
-				if (null != myGrid && !SameGrid(thr, myGrid))
+				if (!SameGrid(myGrid, thr))
 					// Requested that thruster should be on same grid as the ´myGrid´ block, but it was not
 					return false;
 
 				if (0 < engineSizes) {
 					// If thruster-block has more than 4 cubes, then it is (probably) a large thruster
-					bool isLarge = (thr.Max - thr.Min).Size > 4;
+					var isLarge = (thr.Max - thr.Min).Size > 4;
 					if (isLarge) {
 						if (0 == (engineSizes & ThrustFlags.Large))
 							// Thruster is (probably) 'large', but it was not requested
