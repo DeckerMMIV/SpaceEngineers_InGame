@@ -35,7 +35,7 @@ namespace IngameScript {
 		//
 		//--------------------------------------------------------------
 		//--------------------------------------------------------------
-		const string scriptVersion = "4.4.0"; // 2018-03-23
+		const string scriptVersion = "4.4.1"; // 2018-03-24
 
 		Program() {
 			Runtime.UpdateFrequency = UpdateFrequency.Update100;
@@ -47,14 +47,14 @@ namespace IngameScript {
 		void Main(string args, UpdateType updateSource) {
 			if (null!=profiler) {
 				profiler.Append($";{Runtime.LastRunTimeMs:0.000}\n{DateTime.Now.Ticks};{Runtime.TimeSinceLastRun.Ticks}");
-				if (99900 < profiler.Length) { args="PROFILER"; } // Force-Stop the profiler!
+				if (99900 < profiler.Length)
+					args="PROFILER"; // Force-Stop the profiler!
 			}
 			try {
 				Main1(args);
 			} catch (System.Exception excp) {
 				Echo($"FAILED!\n{excp.Message}");
 				lcdCntr.ShowPublicText($"Program Block Runtime Error!\n{excp.Message}");
-				// TODO - Future enhancement. If failed because of referencing non-existing block, then try to automatically recover - except if its the timer-block.
 			}
 			profiler?.Append($";{Runtime.CurrentInstructionCount}");
 		}
@@ -217,32 +217,25 @@ namespace IngameScript {
 		void BuildMenu() {
 			menuMgr.Clear();
 
-			//
 			alignMgr?.AddMenu(menuMgr);
 			toolsMgr?.AddMenu(menuMgr);
 			engineMgr?.AddMenu(menuMgr);
 			ascDecMgr?.AddMenu(menuMgr);
 
-			//
-			MenuItem tt;
-			menuMgr.Add(tt=Menu("Misc. operations"));
-			if (null != yieldMgr)
-				tt.Add(
+			menuMgr.Add(
+				Menu("Misc. operations").Add(
 					Menu(() => $"Unlock from connector{ConnectorUnlockInfo}")
 						.Enter("connectorUnlock", () => yieldMgr.Add(UnlockFromConnector())),
 					Menu(() => $"Lock-on to connector{ConnectorLockInfo}")
-						.Enter("connectorLock", () => yieldMgr.Add(AttemptLockToConnector()))
-				);
-
-			tt.Add(
-				Menu("Radio: Hangar doors toggle").Enter("radioHangarDoors", () => {
-					var lst = GetBlocksOfType(this,"radioantenna",Me);
-					if (0 < lst.Count)
-						(lst[0] as IMyRadioAntenna)?.TransmitMessage("HangarDoors", MyTransmitTarget.Default | MyTransmitTarget.Neutral);
-				})
+						.Enter("connectorLock", () => yieldMgr.Add(AttemptLockToConnector())),
+					Menu("Radio: Hangar doors toggle").Enter("radioHangarDoors", () => {
+						var lst = GetBlocksOfType(this,"radioantenna",Me);
+						if (0 < lst.Count)
+							(lst[0] as IMyRadioAntenna)?.TransmitMessage("HangarDoors", MyTransmitTarget.Default | MyTransmitTarget.Neutral);
+					})
+				)
 			);
 
-			//
 			menuMgr.Add(
 				Menu("My often used sequence").Add(
 					Menu(() => $"Lock-on to connector{ConnectorLockInfo}")
@@ -251,12 +244,11 @@ namespace IngameScript {
 						.Enter(()=>menuMgr.DoAction("connectorUnlock")),
 					Menu(() => LabelOnOff(alignMgr?.Active ?? false, "Align:", "ENABLED", "OFF"))
 						.Enter(()=>menuMgr.DoAction("toggleAlign")),
-					Menu(() => $"Direction {engineMgr?.GetText(1,"Front",18) ?? "n/a"}")
-						.Enter(()=>menuMgr.DoAction("toggleFront"))
-						.Collect(engineMgr),
-					Menu(() => $"Override {engineMgr?.GetText(2,"Back",18) ?? "n/a"}")
-						.Enter(()=>menuMgr.DoAction("thrustBack"))
-						.Collect(engineMgr)
+					Menu(()=>LabelOnOff(cruiseState, $"Cruise forward (max {maxTopSpeed}):"))
+						.Enter(()=>ForwardCruise())
+						.Left(()=>maxTopSpeed=Math.Max(5,maxTopSpeed-5))
+						.Right(()=>maxTopSpeed=Math.Min(100,maxTopSpeed+5))
+						.Back(()=>maxTopSpeed=90)
 				)
 			);
 		}
@@ -279,6 +271,29 @@ namespace IngameScript {
 					shipCtrl = lst[0] as IMyShipController;
 			}
 			return shipCtrl;
+		}
+
+		//---------------
+
+		double maxTopSpeed = 90;
+		bool cruiseState = false;
+		void ForwardCruise() {
+			if (cruiseState=!cruiseState) {
+				engineMgr.tsEnable(ThrustFlags.Front,false);
+				yieldMgr.Add(AccelerateCruise(++cruiseInstance));
+			} else {
+				++cruiseInstance;
+				engineMgr.tsEnable(ThrustFlags.Front,true);
+			}
+		}
+		int cruiseInstance = 0;
+		IEnumerable<int> AccelerateCruise(int selfInstance) {
+			yield return 1;
+			engineMgr.tsPower(ThrustFlags.Back,100);
+			while (selfInstance == cruiseInstance && shipCtrl.GetShipSpeed() < maxTopSpeed) {
+				yield return 20;
+			}
+			engineMgr.tsPower(ThrustFlags.Back,0);
 		}
 
 		//---------------
@@ -410,13 +425,12 @@ namespace IngameScript {
 			var cmd=miCmd[1 + Math.Sign(mi.X)]+
 					miCmd[4 + Math.Sign(mi.Z)]+
 					miCmd[7 + Math.Sign(mi.Y)];
-			if (cmd.Length == 0) {
+			if (cmd.Length == 0)
 				keysReleased = true;
-			} else if (!keysReleased) {
+			else if (!keysReleased)
 				return "";
-			} else {
+			else
 				keysReleased = false;
-			}
 			return cmd;
 		}
  	}

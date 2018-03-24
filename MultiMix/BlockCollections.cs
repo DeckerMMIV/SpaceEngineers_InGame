@@ -25,7 +25,7 @@ namespace IngameScript {
 				return lst[0];
 			int itr=0;
 			while (lst[itr].EntityId != curBlk.EntityId && lst.Count > ++itr) {}
-			return lst[(itr+dir) % lst.Count];
+			return lst[(itr+dir+lst.Count) % lst.Count];
 		}
 
 		public static void ActionOnBlocksOfType<T>(Program pgm, IMyTerminalBlock gridRef, Action<T> act) where T : class, IMyTerminalBlock {

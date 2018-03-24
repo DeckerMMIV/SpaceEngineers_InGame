@@ -43,7 +43,7 @@ namespace IngameScript {
 				return UpdateFrequency.Update100;
 			}
 
-			private void Execute(IEnumerator<int> iter) {
+			void Execute(IEnumerator<int> iter) {
 				if (!iter.MoveNext())
 					iter.Dispose();
 				else {
@@ -54,7 +54,7 @@ namespace IngameScript {
 				}
 			}
 
-			private SortedList<long,IEnumerator<int>> pending = new SortedList<long,IEnumerator<int>>();
+			SortedList<long,IEnumerator<int>> pending = new SortedList<long,IEnumerator<int>>();
 		}
 	}
 }
